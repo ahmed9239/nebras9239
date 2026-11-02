@@ -14,6 +14,11 @@
     body { font-family: 'Tajawal', sans-serif; }
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.98); }
+    }
+    .animate-pulse-fast { animation: pulse-fast 1.2s infinite; }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen selection:bg-emerald-500 selection:text-black">
@@ -58,12 +63,11 @@
               const sellPercent = (100 - parseFloat(buyPercent)).toFixed(1);
               const netInflowNum = (volNum * (changeNum / 100) * 0.15) / 1000000;
               
-              const entry = priceNum * 0.995; // افتراض سعر دخول قريب
+              const entry = priceNum * 0.995;
               const sl = entry * 0.985;
               const tp = entry * 1.03;
 
-              // تحديد حالة الصفقة تلقائياً بناءً على السعر الحالي والتغير
-              let tradeStatus = 'active'; // مستمرة
+              let tradeStatus = 'active';
               let statusLabel = 'مستمرة 🔄';
               let statusColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
 
@@ -177,8 +181,13 @@
           .slice(0, 15);
       }, [allTickers]);
 
+      // العملات الجاهزة للدخول الفوري حالياً (أعلى سيولة في آخر لحظة)
+      const readyToEntry = useMemo(() => {
+        return vipSignals.filter(item => item.netInflowNum > 0.5 && item.changeNum > 1.0)[0];
+      }, [vipSignals]);
+
       const topInflow = useMemo(() => [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum)[0], [allTickers]);
-      const topOutflow = useMemo(() => [...allTickers].sort((a, b) => a.netInflowNum - b.netInflowNum)[0], [allTickers]);
+      const topOutflow = useMemo(() => [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum)[0], [allTickers]);
 
       const riskAmount = (capital * (riskPercent / 100)).toFixed(2);
       const priceDiff = Math.abs(entryPrice - stopLoss);
@@ -362,16 +371,39 @@
               </div>
             )}
 
-            {/* تبويب صفقات VIP المحدث مع حالة الصفقة (مستمرة، تحققت، فشلت) */}
+            {/* تبويب صفقات VIP مع شريط التنبيه الفوري بالصفقات الجاهزة */}
             {activeTab === 'signals' && (
               <div className="space-y-3">
+                {/* Live Alert Banner (تنبيه الصفقة الجاهزة الآن) */}
+                {readyToEntry && (
+                  <div 
+                    onClick={() => { 
+                      setSelectedSymbol(`BINANCE:${readyToEntry.symbol}`); 
+                      setEntryPrice(readyToEntry.rawPrice);
+                      setStopLoss(readyToEntry.rawPrice * 0.985);
+                      setActiveTab('chart'); 
+                    }}
+                    className="bg-emerald-950/80 border-2 border-emerald-500 rounded-2xl p-3.5 space-y-2 cursor-pointer animate-pulse-fast shadow-lg shadow-emerald-500/20"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2.5 py-1 rounded-full">🚨 تنبيه صفقة جاهزة للدخول الآن!</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{readyToEntry.netInflow}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-extrabold text-white text-sm">عملة {readyToEntry.label}</span>
+                      <span className="text-emerald-300 font-bold">دخول فوري (سعر: ${readyToEntry.price})</span>
+                    </div>
+                    <p className="text-[10px] text-emerald-200/80">رصد تدفق سيولة حاد وتجميع حيتان مؤكد. اضغط للانتقال للشارت والتنفيذ!</p>
+                  </div>
+                )}
+
                 <div className="bg-gray-900 border border-emerald-500/30 rounded-xl p-3 text-xs flex justify-between items-center">
                   <span className="font-bold text-emerald-400">توصيات صانع السوق وحالة الصفقات الحية</span>
                   <span className="text-[10px] text-gray-400">فريم 15m</span>
                 </div>
 
                 {loading ? (
-                  <div className="text-center py-12 text-gray-400 text-xs">جاري تتبع حالات الصفقات الحية...</div>
+                  <div className="text-center py-12 text-gray-400 text-xs">جاري فحص وتتبع الصفقات الحية...</div>
                 ) : (
                   vipSignals.map((item, idx) => (
                     <div 
