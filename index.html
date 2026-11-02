@@ -25,7 +25,7 @@
     function NebrasApp() {
       const [activeTab, setActiveTab] = useState('radar');
       const [timeframe, setTimeframe] = useState('15m');
-      const [category, setCategory] = useState('all'); // all, inflow, outflow, majors, ai
+      const [category, setCategory] = useState('all');
       const [loading, setLoading] = useState(true);
       const [allTickers, setAllTickers] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +37,6 @@
       const [entryPrice, setEntryPrice] = useState(67000);
       const [stopLoss, setStopLoss] = useState(66000);
 
-      // قائمة عملات الذكاء الاصطناعي للمعاينة والفلترة
       const aiSymbols = ['TAO', 'FET', 'NEAR', 'RNDR', 'WLD', 'AGIX', 'AKT'];
       const majorSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX'];
 
@@ -55,7 +54,6 @@
               const changeNum = parseFloat(t.priceChangePercent);
               const volNum = parseFloat(t.quoteVolume);
 
-              // حساب مؤشرات الشراء والبيع والتدفق افتراضياً بناءً على حجم التداول والتغير
               const buyPercent = Math.min(Math.max(50 + (changeNum * 2.5), 20), 85).toFixed(1);
               const sellPercent = (100 - parseFloat(buyPercent)).toFixed(1);
               const netInflowNum = (volNum * (changeNum / 100) * 0.15) / 1000000;
@@ -74,7 +72,7 @@
                 signalTag = 'خروج سيولة حاد ⚠️';
                 signalColor = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
               } else if (changeNum > 3 && buyPercent > 60) {
-                signalTag = 'تجميع حيتان (Accumulation)';
+                signalTag = 'تجميع حيتان';
                 signalColor = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
               }
 
@@ -129,7 +127,6 @@
         }
       }, [activeTab, selectedSymbol, timeframe]);
 
-      // فرز وتصفية القائمة بناءً على التبويب المختار
       const filteredPairs = useMemo(() => {
         let result = [...allTickers];
 
@@ -152,7 +149,6 @@
         return result.slice(0, 60);
       }, [allTickers, searchTerm, category]);
 
-      // حسابات الإحصائيات العامة العلوي
       const topInflow = useMemo(() => [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum)[0], [allTickers]);
       const topOutflow = useMemo(() => [...allTickers].sort((a, b) => a.netInflowNum - b.netInflowNum)[0], [allTickers]);
 
@@ -169,7 +165,7 @@
                 رادار تدفق السيولة المؤسسية
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V8.0</span>
               </h1>
-              <p className="text-[10px] text-gray-400 mt-0.5">تتبع المالي المباشر وتدفقات الحيتان - Binance</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">التتبع المالي المباشر وتدفقات الحيتان - Binance</p>
             </div>
             <span className="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[11px] px-2.5 py-1 rounded-full border border-emerald-500/20 font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -177,7 +173,7 @@
             </span>
           </header>
 
-          {/* Stats Bar (إحصائيات السيولة العلوية) */}
+          {/* Stats Bar */}
           <div className="grid grid-cols-2 gap-2 p-3 bg-gray-900/50 border-b border-gray-800/80">
             <div className="bg-gray-900 border border-emerald-500/20 rounded-xl p-2.5 flex items-center justify-between">
               <div>
@@ -195,8 +191,8 @@
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="grid grid-cols-4 bg-gray-900/80 p-1 m-3 rounded-xl border border-gray-800 gap-1 text-[11px] text-center">
+          {/* Navigation Tabs (تمت إضافة الخريطة الحرارية هنا) */}
+          <nav className="grid grid-cols-5 bg-gray-900/80 p-1 m-3 rounded-xl border border-gray-800 gap-1 text-[10px] text-center">
             <button 
               onClick={() => setActiveTab('radar')}
               className={`py-2 font-bold rounded-lg transition-all ${activeTab === 'radar' ? 'bg-emerald-500 text-gray-950 shadow-lg shadow-emerald-500/20' : 'text-gray-400'}`}
@@ -204,10 +200,16 @@
               الرادار
             </button>
             <button 
+              onClick={() => setActiveTab('heatmap')}
+              className={`py-2 font-bold rounded-lg transition-all ${activeTab === 'heatmap' ? 'bg-emerald-500 text-gray-950 shadow-lg shadow-emerald-500/20' : 'text-gray-400'}`}
+            >
+              الحرارية 🌡️
+            </button>
+            <button 
               onClick={() => setActiveTab('signals')}
               className={`py-2 font-bold rounded-lg transition-all ${activeTab === 'signals' ? 'bg-emerald-500 text-gray-950 shadow-lg shadow-emerald-500/20' : 'text-gray-400'}`}
             >
-              صفقات VIP
+              VIP
             </button>
             <button 
               onClick={() => setActiveTab('chart')}
@@ -227,7 +229,6 @@
           <main className="flex-1 px-3 space-y-3">
             {activeTab === 'radar' && (
               <div className="space-y-3">
-                {/* Timeframe selector & Search */}
                 <div className="flex gap-2 items-center">
                   <input 
                     type="text"
@@ -243,7 +244,6 @@
                   </div>
                 </div>
 
-                {/* Sector Filters (فلاتر التصنيفات والقطاعات) */}
                 <div className="flex gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar">
                   <button onClick={() => setCategory('all')} className={`px-3 py-1.5 rounded-lg border whitespace-nowrap ${category === 'all' ? 'bg-gray-800 border-emerald-500/50 text-emerald-400 font-bold' : 'bg-gray-900/60 border-gray-800 text-gray-400'}`}>كل العملات</button>
                   <button onClick={() => setCategory('inflow')} className={`px-3 py-1.5 rounded-lg border whitespace-nowrap ${category === 'inflow' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 font-bold' : 'bg-gray-900/60 border-gray-800 text-gray-400'}`}>دخول سيولة 🔥</button>
@@ -261,7 +261,6 @@
                       onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setActiveTab('chart'); }}
                       className="bg-gray-900 border border-gray-800/90 hover:border-emerald-500/50 rounded-xl p-3 space-y-2.5 cursor-pointer transition-all"
                     >
-                      {/* Row 1: Header & Tags */}
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <span className="font-extrabold text-sm text-white">{item.label}</span>
@@ -272,7 +271,6 @@
                         </span>
                       </div>
 
-                      {/* Row 2: Price & Net Inflow */}
                       <div className="flex justify-between items-center text-xs">
                         <div>
                           <span className="text-gray-400 text-[11px] block">السعر والتغير</span>
@@ -289,7 +287,6 @@
                         </div>
                       </div>
 
-                      {/* Row 3: Buy / Sell Bar (ضغط الشراء مقابل البيع) */}
                       <div className="space-y-1 pt-1 border-t border-gray-800/60">
                         <div className="flex justify-between text-[10px]">
                           <span className="text-emerald-400 font-bold">شراء {item.buyPercent}%</span>
@@ -302,6 +299,39 @@
                     </div>
                   ))
                 )}
+              </div>
+            )}
+
+            {/* تبويب الخريطة الحرارية الجديد */}
+            {activeTab === 'heatmap' && (
+              <div className="space-y-3">
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs flex justify-between items-center">
+                  <span className="font-bold text-emerald-400">الخريطة الحرارية لأداء السوق (أعلى السيولة)</span>
+                  <span className="text-[10px] text-gray-400">تحديث حي</span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  {allTickers.slice(0, 30).map((item, idx) => {
+                    const isGreen = item.changeNum >= 0;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setActiveTab('chart'); }}
+                        className={`p-3 rounded-xl border flex flex-col justify-between items-center text-center cursor-pointer transition-transform active:scale-95 ${
+                          isGreen 
+                            ? 'bg-emerald-950/40 border-emerald-500/30 hover:border-emerald-400' 
+                            : 'bg-rose-950/40 border-rose-500/30 hover:border-rose-400'
+                        }`}
+                      >
+                        <span className="font-extrabold text-xs text-white">{item.base}</span>
+                        <span className={`font-mono font-bold text-xs my-1 ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {isGreen ? `+${item.change}%` : `${item.change}%`}
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-mono">${item.volume}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
