@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس لِلتَّدَاوُل الذَّكِي - كافة العملات</title>
+  <title>نِبْرَاس لِلتَّدَاوُل الذَّكِي</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Tajawal', sans-serif; }
@@ -24,38 +25,46 @@
       const [loading, setLoading] = useState(true);
       const [allTickers, setAllTickers] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
-      const [displayLimit, setDisplayLimit] = useState(50);
+      const [filterType, setFilterType] = useState('all'); // all, gainers, volume
+      const [selectedSymbol, setSelectedSymbol] = useState('BINANCE:BTCUSDT');
+
+      // حاسبة المخاطر
+      const [capital, setCapital] = useState(1000);
+      const [riskPercent, setRiskPercent] = useState(2);
+      const [entryPrice, setEntryPrice] = useState(67000);
+      const [stopLoss, setStopLoss] = useState(66000);
 
       const fetchAllBinanceData = async () => {
         try {
           const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
           const data = await res.json();
           
-          // تصفية جميع أزواج USDT فقط وفرزها حسب حجم التداول الأكبر
           const usdtPairs = data
             .filter(t => t.symbol.endsWith('USDT'))
-            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
             .map(t => {
               const base = t.symbol.replace('USDT', '');
               const priceNum = parseFloat(t.lastPrice);
               const decimals = priceNum < 1 ? 4 : 2;
               const changeNum = parseFloat(t.priceChangePercent);
+              const volNum = parseFloat(t.quoteVolume);
               
               return {
                 symbol: t.symbol,
                 label: `${base}/USDT`,
+                rawPrice: priceNum,
                 price: priceNum.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
+                changeNum: changeNum,
                 change: changeNum.toFixed(2),
-                volumeNum: parseFloat(t.quoteVolume),
-                volume: (parseFloat(t.quoteVolume) / 1000000).toFixed(2) + 'M',
-                type: changeNum > 5 ? 'اختراق صعودي قوي (Breakout)' : changeNum < -5 ? 'كسر هبوطي حاد (Liquidation)' : 'تداول عرضي منظم (Consolidation)'
+                volumeNum: volNum,
+                volume: (volNum / 1000000).toFixed(2) + 'M',
+                type: changeNum > 5 ? 'اختراق صعودي قوي (Breakout)' : changeNum < -5 ? 'كسر هبوطي حاد (Liquidation)' : 'تداول عرضي منظم'
               };
             });
 
           setAllTickers(usdtPairs);
           setLoading(false);
         } catch (err) {
-          console.error('Binance All Pairs Error:', err);
+          console.error('Binance Fetch Error:', err);
         }
       };
 
@@ -65,12 +74,45 @@
         return () => clearInterval(interval);
       }, []);
 
-      // البحث الفوري والتصفية
+      // تحديث الرسم البياني
+      useEffect(() => {
+        if (activeTab === 'chart' && window.TradingView) {
+          new window.TradingView.widget({
+            "autosize": true,
+            "symbol": selectedSymbol,
+            "interval": "15",
+            "timezone": "Asia/Riyadh",
+            "theme": "dark",
+            "style": "1",
+            "locale": "ar",
+            "toolbar_bg": "#f1f3f6",
+            "enable_publishing": false,
+            "hide_side_toolbar": false,
+            "container_id": "tradingview_chart"
+          });
+        }
+      }, [activeTab, selectedSymbol]);
+
       const filteredPairs = useMemo(() => {
-        return allTickers
-          .filter(item => item.label.toLowerCase().includes(searchTerm.toLowerCase()) || item.symbol.toLowerCase().includes(searchTerm.toLowerCase()))
-          .slice(0, displayLimit);
-      }, [allTickers, searchTerm, displayLimit]);
+        let result = [...allTickers];
+
+        if (filterType === 'gainers') {
+          result.sort((a, b) => b.changeNum - a.changeNum);
+        } else if (filterType === 'volume') {
+          result.sort((a, b) => b.volumeNum - a.volumeNum);
+        }
+
+        if (searchTerm) {
+          result = result.filter(item => item.label.toLowerCase().includes(searchTerm.toLowerCase()));
+        }
+
+        return result.slice(0, 50);
+      }, [allTickers, searchTerm, filterType]);
+
+      // حسابات إدارة المخاطر
+      const riskAmount = (capital * (riskPercent / 100)).toFixed(2);
+      const priceDiff = Math.abs(entryPrice - stopLoss);
+      const posSize = priceDiff > 0 ? (riskAmount / (priceDiff / entryPrice)).toFixed(2) : 0;
 
       return (
         <div className="max-w-md mx-auto min-h-screen flex flex-col pb-6">
@@ -78,104 +120,133 @@
           <header className="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50 flex items-center justify-between">
             <div>
               <h1 className="text-lg font-extrabold text-emerald-400 tracking-wide">نِبْرَاس لِلتَّدَاوُل الذَّكِي</h1>
-              <p className="text-[10px] text-gray-400">رادار السيولة المباشر لجميع عملات Binance ({allTickers.length})</p>
+              <p className="text-[10px] text-gray-400">الربط المباشر المتقدم - Binance</p>
             </div>
             <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              شامل Binance
+              حي مباشر
             </span>
           </header>
 
           {/* Navigation Tabs */}
-          <nav className="flex bg-gray-900/60 p-1.5 m-3 rounded-xl border border-gray-800 gap-1">
+          <nav className="flex bg-gray-900/60 p-1.5 m-3 rounded-xl border border-gray-800 gap-1 text-[11px]">
             <button 
               onClick={() => setActiveTab('radar')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'radar' ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20' : 'text-gray-400 hover:text-white'}`}
+              className={`flex-1 py-2 font-bold rounded-lg transition-all ${activeTab === 'radar' ? 'bg-emerald-500 text-gray-950' : 'text-gray-400'}`}
             >
-              رادار السيولة ({allTickers.length})
+              الرادار
             </button>
             <button 
-              onClick={() => setActiveTab('signals')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'signals' ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20' : 'text-gray-400 hover:text-white'}`}
+              onClick={() => setActiveTab('chart')}
+              className={`flex-1 py-2 font-bold rounded-lg transition-all ${activeTab === 'chart' ? 'bg-emerald-500 text-gray-950' : 'text-gray-400'}`}
             >
-              توصيات VIP
+              الشارت (15m)
             </button>
             <button 
-              onClick={() => setActiveTab('admin')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'admin' ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20' : 'text-gray-400 hover:text-white'}`}
+              onClick={() => setActiveTab('risk')}
+              className={`flex-1 py-2 font-bold rounded-lg transition-all ${activeTab === 'risk' ? 'bg-emerald-500 text-gray-950' : 'text-gray-400'}`}
             >
-              التحكم
+              حاسبة المخاطر
             </button>
           </nav>
 
-          {/* Main Content */}
+          {/* Content */}
           <main className="flex-1 px-3 space-y-3">
             {activeTab === 'radar' && (
               <div className="space-y-3">
-                {/* البحث المباشر */}
-                <div className="relative">
-                  <input 
-                    type="text"
-                    placeholder="ابحث عن أي عملة (مثال: PEPE, XRP, NEAR...)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-all"
-                  />
-                </div>
+                <input 
+                  type="text"
+                  placeholder="ابحث عن عملة..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
 
-                <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-2.5 flex justify-between items-center text-xs">
-                  <span className="text-gray-400">الفريم: <strong className="text-emerald-400">15m</strong></span>
-                  <span className="text-gray-400">المعروض: <strong className="text-white">{filteredPairs.length}</strong> من <strong className="text-emerald-400">{allTickers.length}</strong> عملة</span>
+                {/* الفلاتر */}
+                <div className="flex gap-2 text-xs">
+                  <button 
+                    onClick={() => setFilterType('volume')}
+                    className={`flex-1 py-1.5 rounded-lg border border-gray-800 ${filterType === 'volume' ? 'bg-gray-800 text-emerald-400 font-bold' : 'text-gray-400'}`}
+                  >
+                    الأعلى حجماً 🔥
+                  </button>
+                  <button 
+                    onClick={() => setFilterType('gainers')}
+                    className={`flex-1 py-1.5 rounded-lg border border-gray-800 ${filterType === 'gainers' ? 'bg-gray-800 text-emerald-400 font-bold' : 'text-gray-400'}`}
+                  >
+                    الأعلى صعوداً 🚀
+                  </button>
                 </div>
 
                 {loading ? (
-                  <div className="text-center py-12 text-gray-400 text-xs">جاري تحميل وسحب كافة عملات باينانس المباشرة...</div>
+                  <div className="text-center py-12 text-gray-400 text-xs">جاري الاتصال بـ Binance...</div>
                 ) : (
-                  <>
-                    {filteredPairs.map((item, idx) => (
-                      <div key={idx} className="bg-gray-900 border border-gray-800/80 hover:border-emerald-500/40 rounded-xl p-3.5 space-y-2 transition-all">
-                        <div className="flex justify-between items-center">
-                          <span className="font-extrabold text-sm text-white tracking-wider">{item.label}</span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${parseFloat(item.change) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                            {parseFloat(item.change) >= 0 ? `+${item.change}%` : `${item.change}%`}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-400">
-                          <span>السعر: <strong className="text-gray-100 font-mono">${item.price}</strong></span>
-                          <span>حجم 24h: <strong className="text-gray-100">${item.volume}</strong></span>
-                        </div>
-                        <div className="pt-1 border-t border-gray-800/50 flex justify-between items-center text-[11px]">
-                          <span className="text-gray-400">الحركة:</span>
-                          <span className="text-emerald-400 font-medium">{item.type}</span>
-                        </div>
+                  filteredPairs.map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setActiveTab('chart'); }}
+                      className="bg-gray-900 border border-gray-800 hover:border-emerald-500/50 rounded-xl p-3.5 space-y-2 cursor-pointer transition-all"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-extrabold text-sm text-white">{item.label}</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${item.changeNum >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                          {item.changeNum >= 0 ? `+${item.change}%` : `${item.change}%`}
+                        </span>
                       </div>
-                    ))}
-
-                    {displayLimit < allTickers.length && !searchTerm && (
-                      <button 
-                        onClick={() => setDisplayLimit(prev => prev + 50)}
-                        className="w-full py-3 bg-gray-900 border border-gray-800 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-400 transition-all"
-                      >
-                        عرض المزيد من العملات (+50)
-                      </button>
-                    )}
-                  </>
+                      <div className="flex justify-between text-xs text-gray-400">
+                        <span>السعر: <strong className="text-gray-100">${item.price}</strong></span>
+                        <span>حجم 24h: <strong className="text-gray-100">${item.volume}</strong></span>
+                      </div>
+                      <div className="pt-1 border-t border-gray-800/50 flex justify-between text-[11px]">
+                        <span className="text-gray-400">الحركة:</span>
+                        <span className="text-emerald-400 font-medium">{item.type} (اضغط للشارت)</span>
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             )}
 
-            {activeTab === 'signals' && (
-              <div className="bg-gray-900 border border-emerald-500/30 rounded-xl p-4 space-y-2">
-                <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2 py-0.5 rounded">تنبيه سيولة VIP</span>
-                <h3 className="text-sm font-bold text-white">رادار الصفقات التلقائي نشط على كافة أزواج USDT</h3>
+            {activeTab === 'chart' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-2 space-y-2 h-[500px]">
+                <div className="text-xs font-bold text-emerald-400 px-2 flex justify-between">
+                  <span>الرسم البياني المباشر (15m): {selectedSymbol}</span>
+                </div>
+                <div id="tradingview_chart" className="h-[450px] w-full"></div>
               </div>
             )}
 
-            {activeTab === 'admin' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">إجمالي الأزواج المتصلة:</span>
-                  <span className="text-emerald-400 font-bold">{allTickers.length} عملة</span>
+            {activeTab === 'risk' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4 text-xs">
+                <h2 className="font-bold text-emerald-400 text-sm">حاسبة إدارة المخاطر والتداول</h2>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-gray-400 block mb-1">رأس المال الإجمالي ($):</label>
+                    <input type="number" value={capital} onChange={(e) => setCapital(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 block mb-1">نسبة المخاطرة المقبولة (%):</label>
+                    <input type="number" value={riskPercent} onChange={(e) => setRiskPercent(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 block mb-1">سعر الدخول ($):</label>
+                    <input type="number" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 block mb-1">وقف الخسارة SL ($):</label>
+                    <input type="number" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded p-2 text-white" />
+                  </div>
+
+                  <div className="p-3 bg-gray-950 border border-emerald-500/30 rounded-lg space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">أقصى مبلغ للمخاطرة:</span>
+                      <span className="font-bold text-rose-400">${riskAmount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">حجم العقد الموصى به:</span>
+                      <span className="font-bold text-emerald-400">${posSize}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
