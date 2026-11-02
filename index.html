@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس لِلتَّدَاوُل الذَّكِي</title>
+  <title>نِبْرَاس لِلتَّدَاوُل الذَّكِي - كافة العملات</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,49 +17,60 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useMemo } = React;
 
     function NebrasApp() {
       const [activeTab, setActiveTab] = useState('radar');
       const [loading, setLoading] = useState(true);
-      const [marketData, setMarketData] = useState([]);
+      const [allTickers, setAllTickers] = useState([]);
+      const [searchTerm, setSearchTerm] = useState('');
+      const [displayLimit, setDisplayLimit] = useState(50);
 
-      const symbols = [
-        { symbol: 'BTCUSDT', label: 'BTC/USDT', type: 'شراء قوي (Liquidation Breakout)' },
-        { symbol: 'ETHUSDT', label: 'ETH/USDT', type: 'تجميع صانع سوق (Order Block)' },
-        { symbol: 'SOLUSDT', label: 'SOL/USDT', type: 'منطقة سيولة ممتدة (Liquidity Sweep)' },
-        { symbol: 'BNBUSDT', label: 'BNB/USDT', type: 'اختبار مؤشر EMA 200' },
-        { symbol: 'DOGEUSDT', label: 'DOGE/USDT', type: 'اختراق حجم التداول (Volume Spike)' },
-        { symbol: 'WLDUSDT', label: 'WLD/USDT', type: 'ارتداد من منطقة دعم ممتدة' }
-      ];
-
-      const fetchBinanceData = async () => {
+      const fetchAllBinanceData = async () => {
         try {
           const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
           const data = await res.json();
           
-          const filtered = symbols.map(item => {
-            const ticker = data.find(t => t.symbol === item.symbol);
-            return {
-              ...item,
-              price: ticker ? parseFloat(ticker.lastPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '---',
-              change: ticker ? parseFloat(ticker.priceChangePercent).toFixed(2) : '0.00',
-              volume: ticker ? (parseFloat(ticker.quoteVolume) / 1000000).toFixed(1) + 'M' : '---'
-            };
-          });
+          // تصفية جميع أزواج USDT فقط وفرزها حسب حجم التداول الأكبر
+          const usdtPairs = data
+            .filter(t => t.symbol.endsWith('USDT'))
+            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+            .map(t => {
+              const base = t.symbol.replace('USDT', '');
+              const priceNum = parseFloat(t.lastPrice);
+              const decimals = priceNum < 1 ? 4 : 2;
+              const changeNum = parseFloat(t.priceChangePercent);
+              
+              return {
+                symbol: t.symbol,
+                label: `${base}/USDT`,
+                price: priceNum.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
+                change: changeNum.toFixed(2),
+                volumeNum: parseFloat(t.quoteVolume),
+                volume: (parseFloat(t.quoteVolume) / 1000000).toFixed(2) + 'M',
+                type: changeNum > 5 ? 'اختراق صعودي قوي (Breakout)' : changeNum < -5 ? 'كسر هبوطي حاد (Liquidation)' : 'تداول عرضي منظم (Consolidation)'
+              };
+            });
 
-          setMarketData(filtered);
+          setAllTickers(usdtPairs);
           setLoading(false);
         } catch (err) {
-          console.error('Binance API Error:', err);
+          console.error('Binance All Pairs Error:', err);
         }
       };
 
       useEffect(() => {
-        fetchBinanceData();
-        const interval = setInterval(fetchBinanceData, 3000); // تحديث كلي كل 3 ثواني
+        fetchAllBinanceData();
+        const interval = setInterval(fetchAllBinanceData, 3000);
         return () => clearInterval(interval);
       }, []);
+
+      // البحث الفوري والتصفية
+      const filteredPairs = useMemo(() => {
+        return allTickers
+          .filter(item => item.label.toLowerCase().includes(searchTerm.toLowerCase()) || item.symbol.toLowerCase().includes(searchTerm.toLowerCase()))
+          .slice(0, displayLimit);
+      }, [allTickers, searchTerm, displayLimit]);
 
       return (
         <div className="max-w-md mx-auto min-h-screen flex flex-col pb-6">
@@ -67,11 +78,11 @@
           <header className="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50 flex items-center justify-between">
             <div>
               <h1 className="text-lg font-extrabold text-emerald-400 tracking-wide">نِبْرَاس لِلتَّدَاوُل الذَّكِي</h1>
-              <p className="text-[10px] text-gray-400">رادار السيولة والتحديث المباشر عبر Binance</p>
+              <p className="text-[10px] text-gray-400">رادار السيولة المباشر لجميع عملات Binance ({allTickers.length})</p>
             </div>
             <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Binance Live
+              شامل Binance
             </span>
           </header>
 
@@ -81,13 +92,13 @@
               onClick={() => setActiveTab('radar')}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'radar' ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20' : 'text-gray-400 hover:text-white'}`}
             >
-              رادار السيولة
+              رادار السيولة ({allTickers.length})
             </button>
             <button 
               onClick={() => setActiveTab('signals')}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'signals' ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20' : 'text-gray-400 hover:text-white'}`}
             >
-              صفقات VIP
+              توصيات VIP
             </button>
             <button 
               onClick={() => setActiveTab('admin')}
@@ -97,74 +108,74 @@
             </button>
           </nav>
 
-          {/* Main Content Areas */}
+          {/* Main Content */}
           <main className="flex-1 px-3 space-y-3">
             {activeTab === 'radar' && (
               <div className="space-y-3">
-                <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-3 flex justify-between items-center">
-                  <span className="text-xs font-semibold text-gray-300">الفريم الزمني المعتمد:</span>
-                  <span className="text-xs bg-gray-800 text-emerald-400 font-bold px-2.5 py-0.5 rounded border border-gray-700">15 دقيقة (15m)</span>
+                {/* البحث المباشر */}
+                <div className="relative">
+                  <input 
+                    type="text"
+                    placeholder="ابحث عن أي عملة (مثال: PEPE, XRP, NEAR...)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+
+                <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-2.5 flex justify-between items-center text-xs">
+                  <span className="text-gray-400">الفريم: <strong className="text-emerald-400">15m</strong></span>
+                  <span className="text-gray-400">المعروض: <strong className="text-white">{filteredPairs.length}</strong> من <strong className="text-emerald-400">{allTickers.length}</strong> عملة</span>
                 </div>
 
                 {loading ? (
-                  <div className="text-center py-12 text-gray-400 text-xs">جاري الاتصال بـ Binance وجلب الأسعار المباشرة...</div>
+                  <div className="text-center py-12 text-gray-400 text-xs">جاري تحميل وسحب كافة عملات باينانس المباشرة...</div>
                 ) : (
-                  marketData.map((item, idx) => (
-                    <div key={idx} className="bg-gray-900 border border-gray-800 hover:border-emerald-500/40 rounded-xl p-3.5 space-y-2 transition-all">
-                      <div className="flex justify-between items-center">
-                        <span className="font-extrabold text-sm text-white tracking-wider">{item.label}</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${parseFloat(item.change) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                          {parseFloat(item.change) >= 0 ? `+${item.change}%` : `${item.change}%`}
-                        </span>
+                  <>
+                    {filteredPairs.map((item, idx) => (
+                      <div key={idx} className="bg-gray-900 border border-gray-800/80 hover:border-emerald-500/40 rounded-xl p-3.5 space-y-2 transition-all">
+                        <div className="flex justify-between items-center">
+                          <span className="font-extrabold text-sm text-white tracking-wider">{item.label}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${parseFloat(item.change) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                            {parseFloat(item.change) >= 0 ? `+${item.change}%` : `${item.change}%`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-400">
+                          <span>السعر: <strong className="text-gray-100 font-mono">${item.price}</strong></span>
+                          <span>حجم 24h: <strong className="text-gray-100">${item.volume}</strong></span>
+                        </div>
+                        <div className="pt-1 border-t border-gray-800/50 flex justify-between items-center text-[11px]">
+                          <span className="text-gray-400">الحركة:</span>
+                          <span className="text-emerald-400 font-medium">{item.type}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-400">
-                        <span>السعر المباشر: <strong className="text-gray-100 font-mono">${item.price}</strong></span>
-                        <span>الحجم (24h): <strong className="text-gray-100">${item.volume}</strong></span>
-                      </div>
-                      <div className="pt-1 border-t border-gray-800/50 flex justify-between items-center text-[11px]">
-                        <span className="text-gray-400">التحليل الحركي:</span>
-                        <span className="text-emerald-400 font-medium">{item.type}</span>
-                      </div>
-                    </div>
-                  ))
+                    ))}
+
+                    {displayLimit < allTickers.length && !searchTerm && (
+                      <button 
+                        onClick={() => setDisplayLimit(prev => prev + 50)}
+                        className="w-full py-3 bg-gray-900 border border-gray-800 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-400 transition-all"
+                      >
+                        عرض المزيد من العملات (+50)
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}
 
             {activeTab === 'signals' && (
-              <div className="space-y-3">
-                <div className="bg-gray-900 border border-emerald-500/30 rounded-xl p-4 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2 py-0.5 rounded">توصية شراء (Long)</span>
-                    <span className="text-[10px] text-gray-400">مباشر</span>
-                  </div>
-                  <h3 className="text-sm font-bold text-white">BTC/USDT - إشارة كسر سيولة</h3>
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-2">
-                    <div className="bg-gray-950 p-2 rounded border border-gray-800">
-                      <span className="text-gray-500 block text-[10px]">منطقة الدخول</span>
-                      <span className="text-gray-200 font-bold">حسب أسعار Binance الحية</span>
-                    </div>
-                    <div className="bg-gray-950 p-2 rounded border border-gray-800">
-                      <span className="text-gray-500 block text-[10px]">الهدف المتوقع</span>
-                      <span className="text-emerald-400 font-bold">+2.5%</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="bg-gray-900 border border-emerald-500/30 rounded-xl p-4 space-y-2">
+                <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2 py-0.5 rounded">تنبيه سيولة VIP</span>
+                <h3 className="text-sm font-bold text-white">رادار الصفقات التلقائي نشط على كافة أزواج USDT</h3>
               </div>
             )}
 
             {activeTab === 'admin' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                <h2 className="text-sm font-bold text-emerald-400">لوحة التحكم والمشتركين</h2>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between p-2.5 bg-gray-950 rounded border border-gray-800">
-                    <span className="text-gray-400">حالة الربط البرمجي:</span>
-                    <span className="font-bold text-emerald-400">Binance REST API (نشط)</span>
-                  </div>
-                  <div className="flex justify-between p-2.5 bg-gray-950 rounded border border-gray-800">
-                    <span className="text-gray-400">معدل التحديث:</span>
-                    <span className="font-bold text-gray-300">كل 3 ثوانٍ</span>
-                  </div>
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">إجمالي الأزواج المتصلة:</span>
+                  <span className="text-emerald-400 font-bold">{allTickers.length} عملة</span>
                 </div>
               </div>
             )}
