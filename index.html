@@ -65,7 +65,7 @@
                 icon: "https://cryptologos.cc/logos/binance-coin-bnb-logo.png"
               });
             } else {
-              alert("تم رفض إذن الإشعارات من متصفح الجوال. يرجى السماح بها من إعدادات المتصفح.");
+              alert("تم رفض إذن الإشعارات من المتصفح.");
             }
           });
         } else {
@@ -91,28 +91,44 @@
               const sellPercent = (100 - parseFloat(buyPercent)).toFixed(1);
               const netInflowNum = (volNum * (changeNum / 100) * 0.15) / 1000000;
               
-              const entry = priceNum * 0.995;
-              let sl = entry * 0.985;
-              const tp1 = entry * 1.02;
-              const tp2 = entry * 1.045;
+              // حسابات الصفقات حسب الاتجاه (Long vs Short)
+              const isShort = netInflowNum < -0.15;
+              
+              let entry = priceNum * (isShort ? 1.005 : 0.995);
+              let sl = isShort ? entry * 1.015 : entry * 0.985;
+              const tp1 = isShort ? entry * 0.98 : entry * 1.02;
+              const tp2 = isShort ? entry * 0.955 : entry * 1.045;
 
               let tradeStatus = 'active';
-              let statusLabel = 'مستمرة 🔄';
-              let statusColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
+              let statusLabel = isShort ? 'شورت مستمرة 🔄' : 'لونج مستمرة 🔄';
+              let statusColor = isShort ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
 
-              if (priceNum >= tp2) {
-                tradeStatus = 'success';
-                statusLabel = 'تحقق الهدف الثاني TP2 🚀';
-                statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
-                sl = tp1;
-              } else if (priceNum >= tp1) {
-                statusLabel = 'تحقق الهدف الأول TP1 ✅ (تم تأمين SL)';
-                statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-                sl = entry;
-              } else if (changeNum <= -2.0) {
-                tradeStatus = 'failed';
-                statusLabel = 'فشلت (ضربت SL) ❌';
-                statusColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+              if (isShort) {
+                if (priceNum <= tp2) {
+                  tradeStatus = 'success';
+                  statusLabel = 'تحقق هدف الشورت الثاني TP2 🚀';
+                  statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
+                } else if (priceNum <= tp1) {
+                  statusLabel = 'تحقق هدف الشورت الأول TP1 ✅';
+                  statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                } else if (changeNum >= 3.0) {
+                  tradeStatus = 'failed';
+                  statusLabel = 'فشلت (ضربت SL للشورت) ❌';
+                  statusColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+                }
+              } else {
+                if (priceNum >= tp2) {
+                  tradeStatus = 'success';
+                  statusLabel = 'تحقق هدف اللونج الثاني TP2 🚀';
+                  statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
+                } else if (priceNum >= tp1) {
+                  statusLabel = 'تحقق هدف اللونج الأول TP1 ✅';
+                  statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                } else if (changeNum <= -2.0) {
+                  tradeStatus = 'failed';
+                  statusLabel = 'فشلت (ضربت SL للونج) ❌';
+                  statusColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+                }
               }
 
               let catTag = 'عملة نشطة';
@@ -149,6 +165,7 @@
                 netInflowNum: netInflowNum,
                 netInflow: (netInflowNum >= 0 ? `+${netInflowNum.toFixed(2)}M$` : `${netInflowNum.toFixed(2)}M$`),
                 catTag: catTag,
+                isShort: isShort,
                 tradeStatus: tradeStatus,
                 statusLabel: statusLabel,
                 statusColor: statusColor,
@@ -212,14 +229,15 @@
 
       const vipSignals = useMemo(() => {
         return allTickers
-          .filter(item => item.netInflowNum > 0.15 || item.changeNum > 2.0)
-          .sort((a, b) => b.netInflowNum - a.netInflowNum)
+          .filter(item => Math.abs(item.netInflowNum) > 0.15 || Math.abs(item.changeNum) > 2.0)
+          .sort((a, b) => Math.abs(b.netInflowNum) - Math.abs(a.netInflowNum))
           .slice(0, 20);
       }, [allTickers]);
 
-      const activeVipSignals = useMemo(() => vipSignals.filter(item => item.tradeStatus === 'active'), [vipSignals]);
+      const activeLongSignals = useMemo(() => vipSignals.filter(item => !item.isShort && item.tradeStatus === 'active'), [vipSignals]);
+      const activeShortSignals = useMemo(() => vipSignals.filter(item => item.isShort && item.tradeStatus === 'active'), [vipSignals]);
       const archivedVipSignals = useMemo(() => vipSignals.filter(item => item.tradeStatus !== 'active'), [vipSignals]);
-      const readyToEntry = useMemo(() => activeVipSignals[0], [activeVipSignals]);
+      const readyToEntry = useMemo(() => activeLongSignals[0] || activeShortSignals[0], [activeLongSignals, activeShortSignals]);
 
       const topInflow = useMemo(() => [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum)[0], [allTickers]);
       const topOutflow = useMemo(() => [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum)[0], [allTickers]);
@@ -235,7 +253,7 @@
             <div>
               <h1 className="text-lg font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس لِلتَّدَاوُل الذَّكِي
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V9.5</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V10.0</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -258,7 +276,7 @@
                   <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-white font-bold">✕</button>
                 </div>
                 <p className="text-[11px] text-gray-300">
-                  ربط معرف تيليجرام أو تفعيل إشعار الجوال الفوري للأهداف المزدوجة:
+                  ربط معرف تيليجرام أو تفعيل إشعار الجوال الفوري لصفقات اللونج والشورت:
                 </p>
                 <form onSubmit={saveTelegramSettings} className="space-y-3">
                   <div>
@@ -375,7 +393,6 @@
                         </div>
                       </div>
 
-                      {/* خط نسبة الشراء والبيع المرئي (الرادار) */}
                       <div className="space-y-1 pt-1 border-t border-gray-800/60">
                         <div className="flex justify-between text-[10px]">
                           <span className="text-emerald-400 font-bold">شراء {item.buyPercent}%</span>
@@ -409,6 +426,7 @@
               </div>
             )}
 
+            {/* تبويب صفقات VIP (لونج وشورت) */}
             {activeTab === 'signals' && (
               <div className="space-y-4">
                 {readyToEntry && (
@@ -416,48 +434,45 @@
                     onClick={() => { 
                       setSelectedSymbol(`BINANCE:${readyToEntry.symbol}`); 
                       setEntryPrice(readyToEntry.rawPrice);
-                      setStopLoss(readyToEntry.rawPrice * 0.985);
                       setActiveTab('chart'); 
                     }}
-                    className="bg-emerald-950/80 border-2 border-emerald-500 rounded-2xl p-3.5 space-y-2 cursor-pointer animate-pulse-fast shadow-lg shadow-emerald-500/20"
+                    className={`border-2 rounded-2xl p-3.5 space-y-2 cursor-pointer animate-pulse-fast shadow-lg ${readyToEntry.isShort ? 'bg-rose-950/80 border-rose-500 shadow-rose-500/20' : 'bg-emerald-950/80 border-emerald-500 shadow-emerald-500/20'}`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2.5 py-1 rounded-full">🚨 صفقة VIP جاهزة الآن!</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{readyToEntry.netInflow}</span>
+                      <span className={`${readyToEntry.isShort ? 'bg-rose-500' : 'bg-emerald-500'} text-gray-950 font-black text-[10px] px-2.5 py-1 rounded-full`}>
+                        {readyToEntry.isShort ? '📉 تنبيه صفقة شورت (Short) جاهزة!' : '📈 تنبيه صفقة لونج (Long) جاهزة!'}
+                      </span>
+                      <span className={`text-xs font-mono font-bold ${readyToEntry.isShort ? 'text-rose-400' : 'text-emerald-400'}`}>{readyToEntry.netInflow}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-extrabold text-white text-sm">عملة {readyToEntry.label}</span>
-                      <span className="text-emerald-300 font-bold">دخول فوري (سعر: ${readyToEntry.price})</span>
+                      <span className={readyToEntry.isShort ? 'text-rose-300 font-bold' : 'text-emerald-300 font-bold'}>دخول فوري بسعر: ${readyToEntry.price}</span>
                     </div>
-                    <p className="text-[10px] text-emerald-200/80">موجه إلى ({userTelegram}) - الأهداف المزدوجة مفعلة.</p>
+                    <p className="text-[10px] text-gray-300">موجه إلى ({userTelegram}) - الأهداف المزدوجة وتتبع الـ SL مفعلة.</p>
                   </div>
                 )}
 
+                {/* صفقات اللونج المستمرة */}
                 <div className="space-y-2.5">
                   <div className="bg-gray-900 border border-emerald-500/40 rounded-xl p-3 text-xs flex justify-between items-center">
-                    <span className="font-bold text-emerald-400">⚡ صفقات VIP المستمرة (ذات الأهداف المزدوجة)</span>
+                    <span className="font-bold text-emerald-400">📈 صفقات VIP لونج (Long - تدفق سيولة صاعد)</span>
                     <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded">مباشر 🔄</span>
                   </div>
 
                   {loading ? (
-                    <div className="text-center py-8 text-gray-400 text-xs">جاري تحليل صفقات الأهداف...</div>
-                  ) : activeVipSignals.length === 0 ? (
-                    <div className="text-center py-6 text-gray-500 text-xs bg-gray-900/50 rounded-xl border border-gray-800">لا توجد صفقات مستمرة حالياً...</div>
+                    <div className="text-center py-6 text-gray-400 text-xs">جاري تحليل الصفقات...</div>
+                  ) : activeLongSignals.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 text-xs bg-gray-900/50 rounded-xl border border-gray-800">لا توجد صفقات لونج نشطة حالياً...</div>
                   ) : (
-                    activeVipSignals.map((item, idx) => (
+                    activeLongSignals.map((item, idx) => (
                       <div 
                         key={idx} 
-                        onClick={() => { 
-                          setSelectedSymbol(`BINANCE:${item.symbol}`); 
-                          setEntryPrice(item.rawPrice);
-                          setStopLoss(item.rawPrice * 0.985);
-                          setActiveTab('chart'); 
-                        }}
+                        onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
                         className="bg-gray-900 border border-emerald-500/40 rounded-xl p-3.5 space-y-3 cursor-pointer hover:border-emerald-400 transition-all"
                       >
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
-                            <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2 py-0.5 rounded">VIP (Long)</span>
+                            <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2 py-0.5 rounded">LONG 🟢</span>
                             <span className="font-extrabold text-sm text-white">{item.label}</span>
                           </div>
                           <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${item.statusColor}`}>{item.statusLabel}</span>
@@ -473,24 +488,67 @@
                             <span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span>
                           </div>
                           <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/20">
-                            <span className="text-emerald-400 block text-[8px] mb-0.5">الهدف 1 (TP1)</span>
+                            <span className="text-emerald-400 block text-[8px] mb-0.5">الهدف 1</span>
                             <span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span>
                           </div>
                           <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/20">
-                            <span className="text-cyan-400 block text-[8px] mb-0.5">الهدف 2 (TP2)</span>
+                            <span className="text-cyan-400 block text-[8px] mb-0.5">الهدف 2</span>
                             <span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span>
                           </div>
-                        </div>
-
-                        <div className="flex justify-between items-center text-[10px] text-gray-400 pt-1 border-t border-gray-800/80">
-                          <span>السيولة: <strong className="text-emerald-400">{item.netInflow}</strong></span>
-                          <span className="text-emerald-400 underline font-medium">عرض الشارت وتتبع الأهداف 📊</span>
                         </div>
                       </div>
                     ))
                   )}
                 </div>
 
+                {/* صفقات الشورت المستمرة */}
+                <div className="space-y-2.5 pt-2">
+                  <div className="bg-gray-900 border border-rose-500/40 rounded-xl p-3 text-xs flex justify-between items-center">
+                    <span className="font-bold text-rose-400">📉 صفقات VIP شورت (Short - خروج سيولة وتصريف)</span>
+                    <span className="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded">مباشر 🔄</span>
+                  </div>
+
+                  {activeShortSignals.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 text-xs bg-gray-900/50 rounded-xl border border-gray-800">لا توجد صفقات شورت نشطة حالياً...</div>
+                  ) : (
+                    activeShortSignals.map((item, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
+                        className="bg-gray-900 border border-rose-500/40 rounded-xl p-3.5 space-y-3 cursor-pointer hover:border-rose-400 transition-all"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className="bg-rose-500 text-gray-950 font-black text-[10px] px-2 py-0.5 rounded">SHORT 🔴</span>
+                            <span className="font-extrabold text-sm text-white">{item.label}</span>
+                          </div>
+                          <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${item.statusColor}`}>{item.statusLabel}</span>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                          <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800">
+                            <span className="text-gray-400 block text-[8px] mb-0.5">الدخول</span>
+                            <span className="text-white font-mono font-bold">${item.entryFormatted}</span>
+                          </div>
+                          <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/20">
+                            <span className="text-rose-400 block text-[8px] mb-0.5">وقف (SL)</span>
+                            <span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span>
+                          </div>
+                          <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/20">
+                            <span className="text-emerald-400 block text-[8px] mb-0.5">الهدف 1</span>
+                            <span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span>
+                          </div>
+                          <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/20">
+                            <span className="text-cyan-400 block text-[8px] mb-0.5">الهدف 2</span>
+                            <span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* أرشيف الصفقات */}
                 {archivedVipSignals.length > 0 && (
                   <div className="space-y-2.5 pt-4 border-t border-gray-800">
                     <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-3 text-xs flex justify-between items-center">
@@ -507,10 +565,6 @@
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-xs text-gray-300">{item.label}</span>
                           <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${item.statusColor}`}>{item.statusLabel}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] text-gray-400">
-                          <span>السعر الحالي: <span className="font-mono text-white">${item.price}</span></span>
-                          <span className="text-emerald-400 underline">الشارت 📊</span>
                         </div>
                       </div>
                     ))}
@@ -530,7 +584,7 @@
 
             {activeTab === 'risk' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4 text-xs">
-                <h2 className="font-bold text-emerald-400 text-sm">حاسبة إدارة المخاطر وتتبع الأهداف</h2>
+                <h2 className="font-bold text-emerald-400 text-sm">حاسبة إدارة المخاطر والتداول</h2>
                 <div className="space-y-3">
                   <div>
                     <label className="text-gray-400 block mb-1">رأس المال الإجمالي ($):</label>
@@ -545,7 +599,7 @@
                     <input type="number" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded p-2 text-white" />
                   </div>
                   <div>
-                    <label className="text-gray-400 block mb-1">وقف الخسارة الأساسي SL ($):</label>
+                    <label className="text-gray-400 block mb-1">وقف الخسارة SL ($):</label>
                     <input type="number" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded p-2 text-white" />
                   </div>
 
@@ -555,7 +609,7 @@
                       <span className="font-bold text-rose-400">${riskAmount}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">حجم العقد المقترح:</span>
+                      <span className="text-gray-400">حجم العقد:</span>
                       <span className="font-bold text-emerald-400">${posSize}</span>
                     </div>
                   </div>
