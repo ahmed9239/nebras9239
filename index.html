@@ -34,7 +34,7 @@
       const [loading, setLoading] = useState(true);
       const [allTickers, setAllTickers] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
-      const [selectedSymbol, setSelectedSymbol] = useState('BINANCE:BTCUSDT');
+      const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
       
       const [userTelegram, setUserTelegram] = useState(localStorage.getItem('nebras_telegram') || '@ahmed17200');
       const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -190,15 +190,9 @@
 
       useEffect(() => {
         if (activeTab === 'chart' && window.TradingView) {
-          // ضمان توافق وتنسيق الرمز ليعمل على شارت TradingView بدون أخطاء
-          let tvSymbol = selectedSymbol;
-          if (!tvSymbol.startsWith('BINANCE:')) {
-            tvSymbol = `BINANCE:${tvSymbol.replace('BINANCE:', '')}`;
-          }
-
           new window.TradingView.widget({
             "autosize": true,
-            "symbol": tvSymbol,
+            "symbol": `BINANCE:${selectedSymbol}`,
             "interval": timeframe === '5m' ? '5' : timeframe === '1h' ? '60' : '15',
             "timezone": "Asia/Riyadh",
             "theme": "dark",
@@ -267,7 +261,7 @@
             <div>
               <h1 className="text-lg font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس لِلتَّدَاوُل الذَّكِي
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V11.5</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V12.0</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -290,7 +284,7 @@
                   <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-white font-bold">✕</button>
                 </div>
                 <p className="text-[11px] text-gray-300">
-                  ربط معرف تيليجرام أو تفعيل إشعار الجوال الفوري للانفجارات السعرية وصفقات VIP:
+                  ربط معرف تيليجرام أو تفعيل إشعار الجوال الفوري للانفجارات وصفقات VIP:
                 </p>
                 <form onSubmit={saveTelegramSettings} className="space-y-3">
                   <div>
@@ -671,7 +665,7 @@
       );
     }
 
-    ReactDOM.createRoot(defaultRoot || document.getElementById('root')).render(<NebrasApp />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<NebrasApp />);
   </script>
 </body>
 </html>
