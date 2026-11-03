@@ -83,7 +83,12 @@
             .map(t => {
               const base = t.symbol.replace('USDT', '');
               const priceNum = parseFloat(t.lastPrice);
-              const decimals = priceNum < 1 ? 4 : 2;
+              
+              // تحديد عدد الخانات العشرية بدقة للعملات ذات الأصفار الكثيرة مثل PEPE
+              let decimals = 2;
+              if (priceNum < 0.0001) decimals = 8;
+              else if (priceNum < 1) decimals = 4;
+
               const changeNum = parseFloat(t.priceChangePercent);
               const volNum = parseFloat(t.quoteVolume);
 
@@ -151,11 +156,11 @@
                 base: base,
                 label: `${base}/USDT`,
                 rawPrice: priceNum,
-                price: priceNum.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
-                entryFormatted: entry.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
-                slFormatted: sl.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
-                tp1Formatted: tp1.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
-                tp2Formatted: tp2.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
+                price: priceNum.toFixed(decimals),
+                entryFormatted: entry.toFixed(decimals),
+                slFormatted: sl.toFixed(decimals),
+                tp1Formatted: tp1.toFixed(decimals),
+                tp2Formatted: tp2.toFixed(decimals),
                 changeNum: changeNum,
                 change: changeNum.toFixed(2),
                 volumeNum: volNum,
@@ -190,9 +195,14 @@
 
       useEffect(() => {
         if (activeTab === 'chart' && window.TradingView) {
+          let cleanSymbol = selectedSymbol ? selectedSymbol.replace('BINANCE:', '') : 'BTCUSDT';
+          if (cleanSymbol.includes('HAEDAL') || cleanSymbol.includes('WTC')) {
+            cleanSymbol = 'BTCUSDT';
+          }
+
           new window.TradingView.widget({
             "autosize": true,
-            "symbol": `BINANCE:${selectedSymbol}`,
+            "symbol": `BINANCE:${cleanSymbol}`,
             "interval": timeframe === '5m' ? '5' : timeframe === '1h' ? '60' : '15',
             "timezone": "Asia/Riyadh",
             "theme": "dark",
@@ -247,8 +257,16 @@
       const archivedVipSignals = useMemo(() => vipSignals.filter(item => item.tradeStatus !== 'active'), [vipSignals]);
       const readyToEntry = useMemo(() => breakoutSignals[0] || activeLongSignals[0], [breakoutSignals, activeLongSignals]);
 
-      const topInflow = useMemo(() => [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum)[0], [allTickers]);
-      const topOutflow = useMemo(() => [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum)[0], [allTickers]);
+      // فصل زعيم الضخ حصرياً عن زعيم الخروج لتجنب تطابق العملة بنسبة 100%
+      const topInflow = useMemo(() => {
+        const sorted = [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum);
+        return sorted.find(item => item.netInflowNum > 0) || sorted[0];
+      }, [allTickers]);
+
+      const topOutflow = useMemo(() => {
+        const sorted = [...allTickers].sort((a, b) => a.netInflowNum - b.netInflowNum);
+        return sorted.find(item => item.netInflowNum < 0) || sorted[sorted.length - 1];
+      }, [allTickers]);
 
       const riskAmount = (capital * (riskPercent / 100)).toFixed(2);
       const priceDiff = Math.abs(entryPrice - stopLoss);
@@ -261,7 +279,7 @@
             <div>
               <h1 className="text-lg font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس لِلتَّدَاوُل الذَّكِي
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V12.0</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V13.0</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
