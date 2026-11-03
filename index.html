@@ -190,9 +190,15 @@
 
       useEffect(() => {
         if (activeTab === 'chart' && window.TradingView) {
+          // ضمان توافق وتنسيق الرمز ليعمل على شارت TradingView بدون أخطاء
+          let tvSymbol = selectedSymbol;
+          if (!tvSymbol.startsWith('BINANCE:')) {
+            tvSymbol = `BINANCE:${tvSymbol.replace('BINANCE:', '')}`;
+          }
+
           new window.TradingView.widget({
             "autosize": true,
-            "symbol": selectedSymbol,
+            "symbol": tvSymbol,
             "interval": timeframe === '5m' ? '5' : timeframe === '1h' ? '60' : '15',
             "timezone": "Asia/Riyadh",
             "theme": "dark",
@@ -261,7 +267,7 @@
             <div>
               <h1 className="text-lg font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس لِلتَّدَاوُل الذَّكِي
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V11.0</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V11.5</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -367,7 +373,11 @@
                   breakoutSignals.map((item, idx) => (
                     <div 
                       key={idx}
-                      onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
+                      onClick={() => { 
+                        setSelectedSymbol(item.symbol); 
+                        setEntryPrice(item.rawPrice); 
+                        setActiveTab('chart'); 
+                      }}
                       className={`border rounded-2xl p-3.5 space-y-3 cursor-pointer transition-all hover:scale-[1.01] ${item.isShort ? 'bg-gray-900 border-rose-500/50 hover:border-rose-400' : 'bg-gray-900 border-emerald-500/50 hover:border-emerald-400'}`}
                     >
                       <div className="flex justify-between items-center">
@@ -438,7 +448,7 @@
                   filteredPairs.map((item, idx) => (
                     <div 
                       key={idx} 
-                      onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setActiveTab('chart'); }}
+                      onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }}
                       className="bg-gray-900 border border-gray-800/90 hover:border-emerald-500/50 rounded-xl p-3 space-y-2.5 cursor-pointer transition-all"
                     >
                       <div className="flex justify-between items-center">
@@ -483,7 +493,7 @@
                   return (
                     <div 
                       key={idx}
-                      onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setActiveTab('chart'); }}
+                      onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }}
                       className={`p-3 rounded-xl border flex flex-col justify-between items-center text-center cursor-pointer ${isGreen ? 'bg-emerald-950/40 border-emerald-500/30' : 'bg-rose-950/40 border-rose-500/30'}`}
                     >
                       <span className="font-extrabold text-xs text-white">{item.base}</span>
@@ -499,7 +509,7 @@
                 {readyToEntry && (
                   <div 
                     onClick={() => { 
-                      setSelectedSymbol(`BINANCE:${readyToEntry.symbol}`); 
+                      setSelectedSymbol(readyToEntry.symbol); 
                       setEntryPrice(readyToEntry.rawPrice);
                       setActiveTab('chart'); 
                     }}
@@ -531,7 +541,7 @@
                     activeLongSignals.map((item, idx) => (
                       <div 
                         key={idx} 
-                        onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
+                        onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
                         className="bg-gray-900 border border-emerald-500/40 rounded-xl p-3.5 space-y-3 cursor-pointer hover:border-emerald-400 transition-all"
                       >
                         <div className="flex justify-between items-center">
@@ -577,7 +587,7 @@
                     activeShortSignals.map((item, idx) => (
                       <div 
                         key={idx} 
-                        onClick={() => { setSelectedSymbol(`BINANCE:${item.symbol}`); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
+                        onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
                         className="bg-gray-900 border border-rose-500/40 rounded-xl p-3.5 space-y-3 cursor-pointer hover:border-rose-400 transition-all"
                       >
                         <div className="flex justify-between items-center">
@@ -616,7 +626,7 @@
             {activeTab === 'chart' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-2 space-y-2 h-[520px]">
                 <div className="text-xs font-bold text-emerald-400 px-2 flex justify-between">
-                  <span>الشارت المباشر: {selectedSymbol} ({timeframe})</span>
+                  <span>الشارت المباشر: BINANCE:{selectedSymbol} ({timeframe})</span>
                 </div>
                 <div id="tradingview_chart" className="h-[470px] w-full"></div>
               </div>
@@ -661,7 +671,7 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<NebrasApp />);
+    ReactDOM.createRoot(defaultRoot || document.getElementById('root')).render(<NebrasApp />);
   </script>
 </body>
 </html>
