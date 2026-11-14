@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس - رادار صافي تدفق السيولة وموجات إليوت الذكية</title>
+  <title>نِبْرَاس - رادار السيولة وموجات إليوت متعددة الفريمات</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -30,6 +30,7 @@
     function NebrasApp() {
       const [activeTab, setActiveTab] = useState('breakouts');
       const [timeframe, setTimeframe] = useState('15m');
+      const [elliottScope, setElliottScope] = useState('small'); // 'small' or 'large'
       const [category, setCategory] = useState('all');
       const [loading, setLoading] = useState(true);
       const [allTickers, setAllTickers] = useState([]);
@@ -98,22 +99,22 @@
               const isShort = netInflowNum < -0.15;
               const isBreakout = Math.abs(changeNum) >= 4.0 || volNum > 50000000;
               
-              let entry = priceNum * (isShort ? 1.005 : 0.995);
-              let sl = isShort ? entry * 1.015 : entry * 0.985;
-              const tp1 = isShort ? entry * 0.98 : entry * 1.02;
-              const tp2 = isShort ? entry * 0.955 : entry * 1.045;
+              // حساب مستويات الدخول والأهداف ووقف الخسارة بدقة لموجات إليوت
+              let entry = priceNum * (isShort ? 1.002 : 0.998);
+              let sl = isShort ? entry * 1.018 : entry * 0.982;
+              const tp1 = isShort ? entry * 0.975 : entry * 1.025;
+              const tp2 = isShort ? entry * 0.945 : entry * 1.055;
 
-              // حساب وتصنيف موجات إليوت للمنصة
               let elliottPhase = 'الموجة الأولى (Wave 1 - بناء الأساس)';
               let elliottColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
-              if (changeNum > 5.0 && volNum > 30000000) {
-                elliottPhase = 'الموجة الدافعة الثالثة (Wave 3 - الأقوى والأعنف 🚀)';
+              if (changeNum > 4.5 && volNum > 30000000) {
+                elliottPhase = 'الموجة الدافعة الثالثة (Wave 3 - الانفجار الأعنف 🚀)';
                 elliottColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
-              } else if (changeNum > 2.0 && changeNum <= 5.0) {
-                elliottPhase = 'الموجة الخامسة (Wave 5 - نهاية الاتجاه ⚠️)';
+              } else if (changeNum > 2.0 && changeNum <= 4.5) {
+                elliottPhase = 'الموجة الخامسة (Wave 5 - قمة الاتجاه ⚠️)';
                 elliottColor = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
               } else if (changeNum < 0 && changeNum > -3.0) {
-                elliottPhase = 'موجة التصحيح الرابعة (Wave 4 - جني أرباح مؤقت 🔄)';
+                elliottPhase = 'موجة التصحيح الرابعة (Wave 4 - فرصة دخول ارتدادية 🔄)';
                 elliottColor = 'bg-purple-500/10 text-purple-400 border-purple-500/30';
               } else if (changeNum <= -3.0) {
                 elliottPhase = 'تصحيح مركب (Wave A-B-C هابط)';
@@ -127,11 +128,9 @@
               if (isShort) {
                 if (priceNum <= tp2) { tradeStatus = 'success'; statusLabel = 'تحقق هدف الشورت TP2 🚀'; statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'; }
                 else if (priceNum <= tp1) { statusLabel = 'تحقق هدف الشورت TP1 ✅'; statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'; }
-                else if (changeNum >= 3.0) { tradeStatus = 'failed'; statusLabel = 'فشلت (ضربت SL للشورت) ❌'; statusColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30'; }
               } else {
                 if (priceNum >= tp2) { tradeStatus = 'success'; statusLabel = 'تحقق هدف اللونج TP2 🚀'; statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'; }
                 else if (priceNum >= tp1) { statusLabel = 'تحقق هدف اللونج TP1 ✅'; statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'; }
-                else if (changeNum <= -2.0) { tradeStatus = 'failed'; statusLabel = 'فشلت (ضربت SL للونج) ❌'; statusColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30'; }
               }
 
               let catTag = 'عملة نشطة';
@@ -245,12 +244,18 @@
           .slice(0, 15);
       }, [allTickers]);
 
+      // فلتر موجات إليوت حسب الفريمات (صغيره / كبيره)
       const elliottSignals = useMemo(() => {
-        return allTickers
-          .filter(item => Math.abs(item.changeNum) >= 3.0 || item.volumeNum > 20000000)
-          .sort((a, b) => b.volumeNum - a.volumeNum)
-          .slice(0, 20);
-      }, [allTickers]);
+        let list = [...allTickers];
+        if (elliottScope === 'small') {
+          // فريمات صغرى: عملات ذات حركة سريعة وفوليوم عالي (5m / 15m)
+          list = list.filter(item => Math.abs(item.changeNum) >= 2.5);
+        } else {
+          // فريمات كبرى: عملات قيادية أو ذات سيولة مؤسسية ضخمة (4h / 1D)
+          list = list.filter(item => majorSymbols.includes(item.base) || Math.abs(item.netInflowNum) > 0.5);
+        }
+        return list.sort((a, b) => b.volumeNum - a.volumeNum).slice(0, 20);
+      }, [allTickers, elliottScope]);
 
       const vipSignals = useMemo(() => {
         return allTickers
@@ -284,7 +289,7 @@
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس لِلتَّدَاوُل الذَّكِي
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V14.0</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V15.0</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -357,7 +362,7 @@
             </div>
           </div>
 
-          {/* Navigation Tabs (7 Tabs including Elliott Waves) */}
+          {/* Navigation Tabs */}
           <nav className="grid grid-cols-7 bg-gray-900/80 p-1 m-3 rounded-xl border border-gray-800 gap-0.5 text-[9px] text-center">
             <button onClick={() => setActiveTab('breakouts')} className={`py-2 font-bold rounded-lg transition-all ${activeTab === 'breakouts' ? 'bg-emerald-500 text-gray-950 shadow-lg shadow-emerald-500/20' : 'text-gray-400'}`}>الانفجار 🚀</button>
             <button onClick={() => setActiveTab('elliott')} className={`py-2 font-bold rounded-lg transition-all ${activeTab === 'elliott' ? 'bg-emerald-500 text-gray-950 shadow-lg shadow-emerald-500/20' : 'text-gray-400'}`}>إليوت 🌊</button>
@@ -371,22 +376,39 @@
           {/* Content Area */}
           <main className="flex-1 px-3 space-y-3">
             
-            {/* Elliott Waves Tab */}
+            {/* Elliott Waves Tab (with Small & Large Timeframe Styles) */}
             {activeTab === 'elliott' && (
               <div className="space-y-3">
-                <div className="bg-gradient-to-r from-cyan-950/70 to-gray-900 border border-cyan-500/50 rounded-2xl p-3.5 space-y-2">
-                  <h2 className="font-black text-cyan-400 text-xs flex items-center gap-1.5">
-                    <span>🌊 رادار موجات إليوت والزخم الموجي (Elliott Wave Scanner)</span>
-                  </h2>
+                <div className="bg-gradient-to-r from-cyan-950/70 to-gray-900 border border-cyan-500/50 rounded-2xl p-3.5 space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <h2 className="font-black text-cyan-400 text-xs flex items-center gap-1.5">
+                      <span>🌊 رادار موجات إليوت والصفقات الذكية</span>
+                    </h2>
+                    {/* زر التبديل بين الفريمات الصغيرة والكبيرة */}
+                    <div className="flex bg-gray-950 p-1 border border-cyan-500/30 rounded-xl text-[10px]">
+                      <button 
+                        onClick={() => setElliottScope('small')} 
+                        className={`px-2.5 py-1 rounded-lg font-bold transition ${elliottScope === 'small' ? 'bg-cyan-500 text-black shadow' : 'text-gray-400'}`}
+                      >
+                        ⚡ فريمات صغرى (5m/15m)
+                      </button>
+                      <button 
+                        onClick={() => setElliottScope('large')} 
+                        className={`px-2.5 py-1 rounded-lg font-bold transition ${elliottScope === 'large' ? 'bg-cyan-500 text-black shadow' : 'text-gray-400'}`}
+                      >
+                        🏛️ فريمات كبرى (4h/1D)
+                      </button>
+                    </div>
+                  </div>
                   <p className="text-[10px] text-gray-300">
-                    يحلل هذا الرادار الهياكل السعرية لتحديد العملات التي تشكل الموجات الدافعة (Wave 3) والتصحيحية (Wave 4).
+                    عرض هيكل الموجات على النمط المختبر ({elliottScope === 'small' ? 'المضاربي اللحظي' : 'الاستثماري الاتجاهي'}) مع تحديد أسعار الدخول، الأهداف، ووقف الخسارة.
                   </p>
                 </div>
 
                 {loading ? (
-                  <div className="text-center py-12 text-gray-400 text-xs">جاري تحليل الهياكل الموجية لأسواق العملات...</div>
+                  <div className="text-center py-12 text-gray-400 text-xs">جاري حساب الهياكل الموجية ومستويات الأسعار...</div>
                 ) : elliottSignals.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 text-xs bg-gray-900/50 rounded-xl border border-gray-800">لا توجد موجات واضحة حالياً...</div>
+                  <div className="text-center py-8 text-gray-500 text-xs bg-gray-900/50 rounded-xl border border-gray-800">لا توجد إشارات موجية متوافقة مع هذا الفريم حالياً...</div>
                 ) : (
                   elliottSignals.map((item, idx) => (
                     <div 
@@ -396,35 +418,38 @@
                         setEntryPrice(item.rawPrice); 
                         setActiveTab('chart'); 
                       }}
-                      className="bg-gray-900 border border-cyan-500/30 hover:border-cyan-400 rounded-2xl p-3.5 space-y-3 cursor-pointer transition-all"
+                      className="bg-gray-900 border border-cyan-500/40 hover:border-cyan-400 rounded-2xl p-3.5 space-y-3 cursor-pointer transition-all shadow-lg"
                     >
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-black text-[10px] px-2 py-0.5 rounded border ${item.elliottColor}`}>
-                            {item.elliottPhase}
-                          </span>
-                        </div>
+                        <span className={`font-black text-[10px] px-2.5 py-1 rounded-lg border ${item.elliottColor}`}>
+                          {item.elliottPhase}
+                        </span>
                         <span className="font-extrabold text-sm text-white">{item.label}</span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                        <div className="bg-gray-950 p-2 rounded-lg border border-gray-800">
-                          <span className="text-gray-400 block text-[8px] mb-0.5">السعر الحالي</span>
-                          <span className="text-white font-mono font-bold">${item.price}</span>
+                      {/* جدول تفاصيل الدخول والأهداف ووقف الخسارة */}
+                      <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800">
+                          <span className="text-gray-400 block text-[8px] mb-0.5">سعر الدخول</span>
+                          <span className="text-white font-mono font-bold">${item.entryFormatted}</span>
                         </div>
-                        <div className="bg-gray-950 p-2 rounded-lg border border-gray-800">
-                          <span className="text-gray-400 block text-[8px] mb-0.5">التغير 24س</span>
-                          <span className={`font-mono font-bold ${item.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.changeNum >= 0 ? `+${item.change}%` : `${item.change}%`}</span>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/30">
+                          <span className="text-rose-400 block text-[8px] mb-0.5">وقف الخسارة SL</span>
+                          <span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span>
                         </div>
-                        <div className="bg-gray-950 p-2 rounded-lg border border-gray-800">
-                          <span className="text-gray-400 block text-[8px] mb-0.5">صافي السيولة</span>
-                          <span className={`font-mono font-bold ${item.netInflowNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.netInflow}</span>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/30">
+                          <span className="text-emerald-400 block text-[8px] mb-0.5">الهدف الأول TP1</span>
+                          <span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span>
+                        </div>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/30">
+                          <span className="text-cyan-400 block text-[8px] mb-0.5">الهدف الثاني TP2</span>
+                          <span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span>
                         </div>
                       </div>
 
                       <div className="flex justify-between items-center text-[10px] text-gray-400 pt-1 border-t border-gray-800">
-                        <span>حالة السيولة: <strong className={item.netInflowNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{item.signalTag}</strong></span>
-                        <span className="text-cyan-400 underline font-medium">فتح شارت إليوت 📊</span>
+                        <span>السيولة: <strong className={item.netInflowNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{item.netInflow}</strong></span>
+                        <span className="text-cyan-400 underline font-medium">فتح شارت التداول 📊</span>
                       </div>
                     </div>
                   ))
