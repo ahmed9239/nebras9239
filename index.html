@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس - محطة التداول المؤسسي الشاملة V16.0</title>
+  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V16.1</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -32,7 +32,7 @@
     function NebrasApp() {
       const [activeTab, setActiveTab] = useState('breakouts');
       const [timeframe, setTimeframe] = useState('15m');
-      const [elliottScope, setElliottScope] = useState('small'); // 'small' or 'large'
+      const [elliottScope, setElliottScope] = useState('small');
       const [category, setCategory] = useState('all');
       const [loading, setLoading] = useState(true);
       const [allTickers, setAllTickers] = useState([]);
@@ -43,7 +43,6 @@
       const [notificationsEnabled, setNotificationsEnabled] = useState(false);
       const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-      // دفتر الصفقات (Trading Journal State)
       const [journalTrades, setJournalTrades] = useState(JSON.parse(localStorage.getItem('nebras_journal') || '[]'));
       const [newTradeSymbol, setNewTradeSymbol] = useState('BTCUSDT');
       const [newTradeType, setNewTradeType] = useState('LONG');
@@ -149,7 +148,6 @@
               const tp1 = isShort ? entry * 0.975 : entry * 1.025;
               const tp2 = isShort ? entry * 0.945 : entry * 1.055;
 
-              // موجات إليوت
               let elliottPhase = 'الموجة الأولى (Wave 1 - بناء الأساس)';
               let elliottColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
               if (changeNum > 4.5 && volNum > 30000000) {
@@ -166,7 +164,6 @@
                 elliottColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
               }
 
-              // مؤشرات الذكاء المؤسسي SMC/ICT
               let smcType = 'منطقة تجميع هادئة (Consolidation)';
               let smcColor = 'bg-gray-800 text-gray-300 border-gray-700';
               if (volNum > 80000000 && changeNum > 3) {
@@ -180,8 +177,6 @@
                 smcColor = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
               }
 
-              // تصفيات العقود وسقويز
-              let squeezeStatus مستقرة = 'مستقرة';
               let squeezeLabel = 'سوق متوازن';
               let squeezeColor = 'text-gray-400 border-gray-700';
               if (changeNum > 4 && volNum > 40000000) {
@@ -370,12 +365,11 @@
 
       return (
         <div className="max-w-md mx-auto min-h-screen flex flex-col pb-6 relative">
-          {/* Header */}
           <header className="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50 flex items-center justify-between shadow-xl">
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس الشَّامِلَة
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V16.0</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V16.1</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -389,7 +383,6 @@
             </div>
           </header>
 
-          {/* Settings Modal */}
           {showSettingsModal && (
             <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
               <div className="bg-gray-900 border border-emerald-500/50 rounded-2xl p-5 w-full max-w-sm space-y-4">
@@ -430,7 +423,6 @@
             </div>
           )}
 
-          {/* Stats Bar */}
           <div className="grid grid-cols-2 gap-2 p-3 bg-gray-900/50 border-b border-gray-800/80">
             <div className="bg-gray-900 border border-emerald-500/20 rounded-xl p-2.5 flex items-center justify-between">
               <div>
@@ -448,7 +440,6 @@
             </div>
           </div>
 
-          {/* Horizontally Scrollable Navigation Bar (All Tools Included) */}
           <nav className="flex overflow-x-auto no-scrollbar bg-gray-900/90 p-1.5 m-3 rounded-xl border border-gray-800 gap-1 text-[10px] whitespace-nowrap">
             <button onClick={() => setActiveTab('breakouts')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'breakouts' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الانفجارات 🚀</button>
             <button onClick={() => setActiveTab('elliott')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'elliott' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>إليوت 🌊</button>
@@ -462,10 +453,7 @@
             <button onClick={() => setActiveTab('risk')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'risk' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>المخاطر</button>
           </nav>
 
-          {/* Content Area */}
           <main className="flex-1 px-3 space-y-3">
-            
-            {/* 1. Elliott Waves Tab */}
             {activeTab === 'elliott' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-cyan-950/70 to-gray-900 border border-cyan-500/50 rounded-2xl p-3.5 space-y-2.5">
@@ -513,7 +501,6 @@
               </div>
             )}
 
-            {/* 2. SMC / ICT Order Blocks Tab */}
             {activeTab === 'smc' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-emerald-950/70 to-gray-900 border border-emerald-500/50 rounded-2xl p-3.5 space-y-2">
@@ -536,7 +523,6 @@
               </div>
             )}
 
-            {/* 3. Liquidation & Squeeze Radar Tab */}
             {activeTab === 'liquidation' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-rose-950/70 to-gray-900 border border-rose-500/50 rounded-2xl p-3.5 space-y-2">
@@ -559,7 +545,6 @@
               </div>
             )}
 
-            {/* 4. Trading Journal Tab */}
             {activeTab === 'journal' && (
               <div className="space-y-4">
                 <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-4 space-y-3">
@@ -624,7 +609,6 @@
               </div>
             )}
 
-            {/* Breakouts Tab */}
             {activeTab === 'breakouts' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-emerald-950/70 to-gray-900 border border-emerald-500/50 rounded-2xl p-3.5 space-y-2">
@@ -642,7 +626,6 @@
               </div>
             )}
 
-            {/* Radar Tab */}
             {activeTab === 'radar' && (
               <div className="space-y-3">
                 <input type="text" placeholder="ابحث عن أي عملة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
@@ -657,7 +640,6 @@
               </div>
             )}
 
-            {/* Heatmap Tab */}
             {activeTab === 'heatmap' && (
               <div className="grid grid-cols-3 gap-2">
                 {allTickers.slice(0, 30).map((item, idx) => (
@@ -669,7 +651,6 @@
               </div>
             )}
 
-            {/* VIP Signals Tab */}
             {activeTab === 'signals' && (
               <div className="space-y-4">
                 {readyToEntry && (
@@ -681,7 +662,6 @@
               </div>
             )}
 
-            {/* Chart Tab */}
             {activeTab === 'chart' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-2 space-y-2 h-[520px]">
                 <div className="text-xs font-bold text-emerald-400 px-2">الشارت المباشر: BINANCE:{selectedSymbol}</div>
@@ -689,7 +669,6 @@
               </div>
             )}
 
-            {/* Risk Tab */}
             {activeTab === 'risk' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4 text-xs">
                 <h2 className="font-bold text-emerald-400 text-sm">حاسبة إدارة المخاطر</h2>
