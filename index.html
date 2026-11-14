@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V26.0</title>
+  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V27.0</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -16,16 +16,6 @@
     ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    @keyframes pulse-fast {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(0.99); }
-    }
-    .animate-pulse-fast { animation: pulse-fast 1.2s infinite; }
-    @keyframes slideDown {
-      from { transform: translateY(-100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    .animate-slide-down { animation: slideDown 0.35s ease-out forwards; }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen selection:bg-emerald-500 selection:text-black">
@@ -54,15 +44,12 @@
         };
         playTone(587.33, now, 0.14);
         playTone(880.00, now + 0.14, 0.28);
-      } catch (e) {
-        console.error('Audio play error:', e);
-      }
+      } catch (e) { console.error(e); }
     };
 
     function NebrasApp() {
       const [activeTab, setActiveTab] = useState('ai_predict');
       const [timeframe, setTimeframe] = useState('1h');
-      const [elliottScope, setElliottScope] = useState('small');
       const [category, setCategory] = useState('all');
       const [vipFilter, setVipFilter] = useState('all');
       const [loading, setLoading] = useState(true);
@@ -72,22 +59,11 @@
       const [manualSymbolInput, setManualSymbolInput] = useState('');
       
       const [userTelegram, setUserTelegram] = useState(localStorage.getItem('nebras_telegram') || '@ahmed17200');
-      const [notificationsEnabled, setNotificationsEnabled] = useState(JSON.parse(localStorage.getItem('nebras_notif_active') || 'true'));
-      const [soundEnabled, setSoundEnabled] = useState(JSON.parse(localStorage.getItem('nebras_sound_active') || 'true'));
+      const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+      const [soundEnabled, setSoundEnabled] = useState(true);
       const [showSettingsModal, setShowSettingsModal] = useState(false);
       const [showNotifModal, setShowNotifModal] = useState(false);
-      
-      const [visualBanner, setVisualBanner] = useState(null);
-      const lastAlertedSymbolRef = useRef('');
-
-      const [platformNotifications, setPlatformNotifications] = useState(JSON.parse(localStorage.getItem('nebras_notif_list') || '[]'));
-
-      const [journalTrades, setJournalTrades] = useState(JSON.parse(localStorage.getItem('nebras_journal') || '[]'));
-      const [newTradeSymbol, setNewTradeSymbol] = useState('BTCUSDT');
-      const [newTradeType, setNewTradeType] = useState('LONG');
-      const [newTradeEntry, setNewTradeEntry] = useState('');
-      const [newTradeResult, setNewTradeResult] = useState('WIN');
-      const [newTradePnL, setNewTradePnL] = useState('');
+      const [platformNotifications, setPlatformNotifications] = useState([]);
 
       const [capital, setCapital] = useState(1000);
       const [riskPercent, setRiskPercent] = useState(2);
@@ -96,73 +72,6 @@
 
       const aiSymbols = ['TAO', 'FET', 'NEAR', 'RNDR', 'WLD', 'AGIX', 'AKT'];
       const majorSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX'];
-
-      const toggleNotifications = () => {
-        const newState = !notificationsEnabled;
-        setNotificationsEnabled(newState);
-        localStorage.setItem('nebras_notif_active', JSON.stringify(newState));
-        if (newState && soundEnabled) playSmartAlertSound();
-      };
-
-      const toggleSound = () => {
-        const newState = !soundEnabled;
-        setSoundEnabled(newState);
-        localStorage.setItem('nebras_sound_active', JSON.stringify(newState));
-        if (newState) playSmartAlertSound();
-      };
-
-      const addPlatformNotification = (text, symbol = null) => {
-        const newNotif = {
-          id: Date.now(),
-          text: text,
-          symbol: symbol,
-          time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        };
-        setPlatformNotifications(prev => {
-          const updated = [newNotif, ...prev].slice(0, 30);
-          localStorage.setItem('nebras_notif_list', JSON.stringify(updated));
-          return updated;
-        });
-      };
-
-      const clearPlatformNotifications = () => {
-        setPlatformNotifications([]);
-        localStorage.removeItem('nebras_notif_list');
-      };
-
-      const addJournalTrade = (e) => {
-        e.preventDefault();
-        if (!newTradeEntry || !newTradePnL) return;
-        const trade = {
-          id: Date.now(),
-          symbol: newTradeSymbol,
-          type: newTradeType,
-          entry: newTradeEntry,
-          result: newTradeResult,
-          pnl: parseFloat(newTradePnL),
-          date: new Date().toLocaleDateString('ar-SA')
-        };
-        const updated = [trade, ...journalTrades];
-        setJournalTrades(updated);
-        localStorage.setItem('nebras_journal', JSON.stringify(updated));
-        setNewTradePnL('');
-      };
-
-      const deleteJournalTrade = (id) => {
-        const updated = journalTrades.filter(t => t.id !== id);
-        setJournalTrades(updated);
-        localStorage.setItem('nebras_journal', JSON.stringify(updated));
-      };
-
-      const journalStats = useMemo(() => {
-        const total = journalTrades.length;
-        if (total === 0) return { winRate: 0, totalPnL: 0, wins: 0, losses: 0 };
-        const wins = journalTrades.filter(t => t.result === 'WIN').length;
-        const losses = total - wins;
-        const winRate = ((wins / total) * 100).toFixed(1);
-        const totalPnL = journalTrades.reduce((acc, t) => acc + t.pnl, 0).toFixed(2);
-        return { winRate, totalPnL, wins, losses };
-      }, [journalTrades]);
 
       const fetchAllBinanceData = async () => {
         try {
@@ -197,31 +106,6 @@
               const tp2 = isShort ? priceNum * 0.945 : priceNum * 1.055;
               const tp3 = isShort ? priceNum * 0.910 : priceNum * 1.100;
 
-              let elliottPhase = 'الموجة الأولى (Wave 1)';
-              let elliottColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
-              if (changeNum > 4.5 && volNum > 30000000) {
-                elliottPhase = 'الموجة الدافعة الثالثة (Wave 3 - الانفجار الأعنف 🚀)';
-                elliottColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
-              } else if (changeNum < -3.0) {
-                elliottPhase = 'تصحيح مركب هابط';
-                elliottColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
-              }
-
-              let smcType = 'منطقة طلب مؤسسي (Bullish OB 🟩)';
-              if (volNum > 60000000 && changeNum < -2.5) {
-                smcType = 'منطقة عرض مؤسسي (Bearish OB 🟥)';
-              }
-
-              let liqType = 'متوازن';
-              let liqColor = 'text-gray-400 border-gray-700';
-              if (changeNum > 3.5) {
-                liqType = 'تصفية شورت ضخمة (Short Squeeze 🚀)';
-                liqColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
-              } else if (changeNum < -3.5) {
-                liqType = 'تصفية لونج ضخمة (Long Squeeze ⚠️)';
-                liqColor = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
-              }
-
               return {
                 symbol: t.symbol,
                 base: base,
@@ -245,12 +129,7 @@
                 netInflow: (netInflowNum >= 0 ? `+${netInflowNum.toFixed(2)}M$` : `${netInflowNum.toFixed(2)}M$`),
                 isShort: isShort,
                 isBreakout: isBreakout,
-                smartScore: 78,
-                elliottPhase: elliottPhase,
-                elliottColor: elliottColor,
-                smcType: smcType,
-                liqType: liqType,
-                liqColor: liqColor,
+                smartScore: 82,
                 signalTag: netInflowNum >= 0 ? 'دخول سيولة حاد 🔥' : 'خروج سيولة حاد ⚠️',
                 signalColor: netInflowNum >= 0 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'text-rose-400 bg-rose-500/10 border-rose-500/30'
               };
@@ -259,16 +138,14 @@
 
           setAllTickers(usdtPairs);
           setLoading(false);
-        } catch (err) {
-          console.error('Binance Fetch Error:', err);
-        }
+        } catch (err) { console.error(err); }
       };
 
       useEffect(() => {
         fetchAllBinanceData();
         const interval = setInterval(fetchAllBinanceData, 4000);
         return () => clearInterval(interval);
-      }, [notificationsEnabled, soundEnabled]);
+      }, []);
 
       useEffect(() => {
         if (activeTab === 'chart' && window.TradingView) {
@@ -282,8 +159,6 @@
             "style": "1",
             "locale": "ar",
             "toolbar_bg": "#f1f3f6",
-            "enable_publishing": false,
-            "hide_side_toolbar": false,
             "container_id": "tradingview_chart"
           });
         }
@@ -291,64 +166,26 @@
 
       const filteredPairs = useMemo(() => {
         let result = [...allTickers];
-        if (category === 'inflow') {
-          result = result.filter(item => item.netInflowNum > 0).sort((a, b) => b.netInflowNum - a.netInflowNum);
-        } else if (category === 'outflow') {
-          result = result.filter(item => item.netInflowNum < 0).sort((a, b) => a.netInflowNum - b.netInflowNum);
-        } else if (category === 'majors') {
-          result = result.filter(item => majorSymbols.includes(item.base));
-        } else if (category === 'ai') {
-          result = result.filter(item => aiSymbols.includes(item.base));
-        } else {
-          result.sort((a, b) => b.volumeNum - a.volumeNum);
-        }
         if (searchTerm) {
           result = result.filter(item => item.label.toLowerCase().includes(searchTerm.toLowerCase()));
         }
-        return result.slice(0, 60);
-      }, [allTickers, searchTerm, category]);
+        return result.slice(0, 50);
+      }, [allTickers, searchTerm]);
 
-      const breakoutSignals = useMemo(() => {
-        return allTickers.filter(item => item.isBreakout).sort((a, b) => Math.abs(b.changeNum) - Math.abs(a.changeNum)).slice(0, 15);
-      }, [allTickers]);
-
-      const elliottSignals = useMemo(() => {
-        return allTickers.filter(item => Math.abs(item.changeNum) >= 2.5).sort((a, b) => b.volumeNum - a.volumeNum).slice(0, 20);
-      }, [allTickers]);
-
-      const smcSignals = useMemo(() => {
-        return allTickers.filter(item => item.volumeNum > 20000000 && Math.abs(item.changeNum) > 1.5).sort((a, b) => b.volumeNum - a.volumeNum).slice(0, 25);
-      }, [allTickers]);
-
-      const liquidationSignals = useMemo(() => {
-        return allTickers.filter(item => Math.abs(item.changeNum) > 2.5 || item.volumeNum > 20000000).sort((a, b) => Math.abs(b.changeNum) - Math.abs(a.changeNum)).slice(0, 25);
-      }, [allTickers]);
-
-      const smartMoneyVipSignals = useMemo(() => {
-        let list = allTickers.filter(item => Math.abs(item.netInflowNum) > 0.35).sort((a, b) => Math.abs(b.netInflowNum) - Math.abs(a.netInflowNum));
-        if (vipFilter === 'long') list = list.filter(i => !i.isShort);
-        if (vipFilter === 'short') list = list.filter(i => i.isShort);
-        return list.slice(0, 25);
-      }, [allTickers, vipFilter]);
+      const breakoutSignals = useMemo(() => allTickers.filter(i => i.isBreakout).slice(0, 20), [allTickers]);
+      const elliottSignals = useMemo(() => allTickers.filter(i => Math.abs(i.changeNum) >= 2.5).slice(0, 20), [allTickers]);
+      const smcSignals = useMemo(() => allTickers.filter(i => i.volumeNum > 15000000).slice(0, 20), [allTickers]);
+      const liquidationSignals = useMemo(() => allTickers.filter(i => Math.abs(i.changeNum) > 3).slice(0, 20), [allTickers]);
+      const vipSignals = useMemo(() => allTickers.filter(i => Math.abs(i.netInflowNum) > 0.2).slice(0, 20), [allTickers]);
 
       const selectedAiTicker = useMemo(() => {
         return allTickers.find(i => i.symbol === selectedSymbol) || allTickers[0] || {
-          symbol: 'BARDUSDT', base: 'BARD', label: 'BARD/USDT', rawPrice: 0.030950, price: '0.030950',
-          entryLowFormatted: '0.029484', entryHighFormatted: '0.030691', slFormatted: '0.027500',
-          tp1Formatted: '0.034000', tp2Formatted: '0.038000', tp3Formatted: '0.042000', changeNum: 3.5, change: '3.50',
-          netInflowNum: 1.2, netInflow: '+1.20M$', smartScore: 78
+          symbol: 'BTCUSDT', base: 'BTC', label: 'BTC/USDT', rawPrice: 65278, price: '65278.96',
+          entryLowFormatted: '65213.68', entryHighFormatted: '65400.00', slFormatted: '66453.98',
+          tp1Formatted: '67500.00', tp2Formatted: '69000.00', tp3Formatted: '72000.00', changeNum: 2.5, change: '2.50',
+          netInflowNum: 1.5, netInflow: '+1.50M$', smartScore: 78
         };
       }, [allTickers, selectedSymbol]);
-
-      const topInflow = useMemo(() => {
-        const sorted = [...allTickers].sort((a, b) => b.netInflowNum - a.netInflowNum);
-        return sorted.find(item => item.netInflowNum > 0) || sorted[0];
-      }, [allTickers]);
-
-      const topOutflow = useMemo(() => {
-        const sorted = [...allTickers].sort((a, b) => a.netInflowNum - b.netInflowNum);
-        return sorted.find(item => item.netInflowNum < 0) || sorted[sorted.length - 1];
-      }, [allTickers]);
 
       const riskAmount = (capital * (riskPercent / 100)).toFixed(2);
       const priceDiff = Math.abs(entryPrice - stopLoss);
@@ -361,77 +198,42 @@
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس الشَّامِلَة
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V26.0</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V27.0</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
             <div className="flex items-center gap-1.5">
-              <button onClick={toggleSound} title="الصوت" className={`text-xs px-2 py-1.5 rounded-lg border font-bold transition ${soundEnabled ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
+              <button onClick={() => setSoundEnabled(!soundEnabled)} className="text-xs px-2 py-1.5 rounded-lg border font-bold bg-gray-800 border-gray-700 text-amber-300">
                 {soundEnabled ? '🔊' : '🔇'}
               </button>
               <button onClick={() => setShowNotifModal(true)} className="relative text-[11px] bg-gray-800 border border-gray-700 text-cyan-400 px-2.5 py-1.5 rounded-lg font-bold">
                 🔔 الإشعارات
-                {platformNotifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{platformNotifications.length}</span>
-                )}
               </button>
-              <button onClick={() => setShowSettingsModal(true)} className="text-[11px] bg-gray-800 border border-gray-700 text-emerald-400 px-2.5 py-1.5 rounded-lg font-bold">⚙️</button>
             </div>
           </header>
 
-          {showSettingsModal && (
-            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-              <div className="bg-gray-900 border border-emerald-500/50 rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
-                <div className="flex justify-between items-center"><h3 className="font-bold text-emerald-400 text-sm">الإعدادات</h3><button onClick={() => setShowSettingsModal(false)} className="text-gray-400 font-bold">✕</button></div>
-                <div className="bg-gray-950 p-3 rounded-xl border border-gray-800 flex items-center justify-between">
-                  <span className="text-xs text-white font-bold">التنبيهات الفورية</span>
-                  <button onClick={toggleNotifications} className={`px-3 py-1.5 rounded-xl text-xs font-bold ${notificationsEnabled ? 'bg-emerald-500 text-gray-950' : 'bg-rose-500/20 text-rose-400'}`}>{notificationsEnabled ? 'مفعلة' : 'معطلة'}</button>
-                </div>
-                <button onClick={() => setShowSettingsModal(false)} className="w-full bg-emerald-500 text-gray-950 text-xs py-2 rounded-xl font-bold">حفظ</button>
-              </div>
-            </div>
-          )}
-
-          {showNotifModal && (
-            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-              <div className="bg-gray-900 border border-cyan-500/50 rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
-                <div className="flex justify-between items-center border-b border-gray-800 pb-2">
-                  <h3 className="font-bold text-cyan-400 text-sm">سجل التنبيهات</h3>
-                  <button onClick={() => setShowNotifModal(false)} className="text-gray-400 font-bold">✕</button>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                  {platformNotifications.map((n) => (
-                    <div key={n.id} className="bg-gray-950 border border-gray-800 p-2.5 rounded-xl text-xs"><p className="text-white">{n.text}</p><span className="text-[9px] text-gray-400">{n.time}</span></div>
-                  ))}
-                </div>
-                <button onClick={clearPlatformNotifications} className="w-full bg-rose-500/20 border border-rose-500/50 text-rose-400 text-xs py-2 rounded-xl font-bold">مسح السجل</button>
-              </div>
-            </div>
-          )}
-
-          {/* شريط القوائم والتبويبات كاملة ومتكاملة تماماً */}
+          {/* شريط التبويبات المتكاملة */}
           <nav className="flex overflow-x-auto no-scrollbar bg-gray-900/90 p-1.5 m-3 rounded-xl border border-gray-800 gap-1 text-[10px] whitespace-nowrap">
             <button onClick={() => setActiveTab('ai_predict')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'ai_predict' ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 border border-indigo-500/30'}`}>🧠 العقل الاصطناعي V5.0</button>
-            <button onClick={() => setActiveTab('security_ai')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'security_ai' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400'}`}>🛡️ تحليل الأمان والهاني بوت</button>
+            <button onClick={() => setActiveTab('security_ai')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'security_ai' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400'}`}>🛡️ تحليل الأمان الهاني بوت</button>
             <button onClick={() => setActiveTab('radar')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'radar' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الرادار 📡</button>
             <button onClick={() => setActiveTab('signals')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'signals' ? 'bg-amber-400 text-gray-950 shadow-lg' : 'text-amber-400 border border-amber-500/30'}`}>VIP الذكي 🎯</button>
             <button onClick={() => setActiveTab('breakouts')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'breakouts' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الانفجارات 🚀</button>
             <button onClick={() => setActiveTab('elliott')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'elliott' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>إليوت 🌊</button>
             <button onClick={() => setActiveTab('smc')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'smc' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>SMC 📊</button>
             <button onClick={() => setActiveTab('liquidation')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'liquidation' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>التصفيات ⚡</button>
-            <button onClick={() => setActiveTab('journal')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'journal' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الدفتر 📖</button>
             <button onClick={() => setActiveTab('chart')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'chart' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الشارت</button>
             <button onClick={() => setActiveTab('risk')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'risk' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>المخاطر</button>
           </nav>
 
           <main className="flex-1 px-3 space-y-3">
             
-            {/* 1. تبويب العقل الاصطناعي التنبؤي الشامل V5.0 بكامل أدواته */}
+            {/* 1. العقل الاصطناعي الشامل بكامل تفاصيله */}
             {activeTab === 'ai_predict' && selectedAiTicker && (
               <div className="space-y-3">
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 text-[11px]">
                   <span className="bg-amber-500/20 border border-amber-500/40 text-amber-300 px-2.5 py-1.5 rounded-lg font-bold whitespace-nowrap">🔥 عملات رائجة</span>
-                  {['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'SUIUSDT', 'PEPEUSDT', 'DOGEUSDT', 'AVAXUSDT'].map((sym, idx) => (
+                  {['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'SUIUSDT', 'PEPEUSDT', 'DOGEUSDT'].map((sym, idx) => (
                     <button key={idx} onClick={() => setSelectedSymbol(sym)} className={`px-3 py-1.5 rounded-lg border font-bold whitespace-nowrap ${selectedSymbol === sym ? 'bg-amber-400 text-black border-amber-400' : 'bg-gray-900 border-gray-800 text-gray-300'}`}>
                       {sym.replace('USDT', '')}
                     </button>
@@ -463,11 +265,22 @@
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
                     <div>
                       <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/40">شراء قوي جداً 🚀</span>
-                      <strong className="text-base text-white font-black block mt-1.5">${selectedAiTicker.price} {selectedAiTicker.label}</strong>
+                      <strong className="text-base text-white font-black block mt-1.5">{selectedAiTicker.label} ${selectedAiTicker.price}</strong>
                     </div>
                     <div className="relative w-16 h-16 rounded-full border-4 border-emerald-500 flex flex-col items-center justify-center bg-gray-950 shadow-lg">
                       <span className="text-sm font-black text-emerald-400">78</span>
                       <span className="text-[8px] text-gray-400 font-bold">قوة القرار</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-[11px]">
+                    <div className="flex justify-between bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                      <span className="text-gray-400">الترند العام:</span>
+                      <span className="text-white font-bold">صاعد مؤسسي | السيولة: {selectedAiTicker.netInflow}</span>
+                    </div>
+                    <div className="flex justify-between bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                      <span className="text-gray-400">الجلسة النشطة:</span>
+                      <span className="text-emerald-400 font-bold">New York Killzone 🟢</span>
                     </div>
                   </div>
                 </div>
@@ -484,11 +297,17 @@
                       <span className="text-rose-300 font-mono font-bold">${selectedAiTicker.slFormatted}</span>
                     </div>
                   </div>
+                  <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+                    <div className="bg-gray-950 p-2 rounded-xl border border-emerald-500/30"><span className="text-emerald-400 block text-[8px]">الهدف 1</span><span className="text-emerald-300 font-mono font-bold">${selectedAiTicker.tp1Formatted}</span></div>
+                    <div className="bg-gray-950 p-2 rounded-xl border border-emerald-500/40"><span className="text-emerald-400 block text-[8px]">الهدف 2</span><span className="text-emerald-300 font-mono font-bold">${selectedAiTicker.tp2Formatted}</span></div>
+                    <div className="bg-gray-950 p-2 rounded-xl border border-cyan-500/40"><span className="text-cyan-400 block text-[8px]">الهدف 3</span><span className="text-cyan-300 font-mono font-bold">${selectedAiTicker.tp3Formatted}</span></div>
+                  </div>
+                  <button onClick={() => { setSelectedSymbol(selectedAiTicker.symbol); setActiveTab('chart'); }} className="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-xs shadow">عرض الشارت التنفيذي 📊</button>
                 </div>
               </div>
             )}
 
-            {/* 2. تبويب تحليل الأمان وبوابة الهاني بوت */}
+            {/* 2. تحليل الأمان وبوابة الهاني بوت */}
             {activeTab === 'security_ai' && (
               <div className="space-y-3">
                 <div className="bg-gray-900 border border-indigo-500/40 rounded-2xl p-4 space-y-3">
@@ -513,127 +332,85 @@
               </div>
             )}
 
-            {/* 3. تبويب الرادار */}
+            {/* 3. الرادار */}
             {activeTab === 'radar' && (
               <div className="space-y-3">
-                <input 
-                  type="text"
-                  placeholder="ابحث عن أي عملة (BTC, ETH, WLD...)"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
-                />
-                {loading ? <div className="text-center py-12 text-gray-400 text-xs">جاري تحليل بيانات السيولة...</div> : (
-                  filteredPairs.map((item, idx) => (
-                    <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-gray-800 rounded-xl p-3.5 space-y-2.5 cursor-pointer">
-                      <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className={`text-[10px] px-2 py-0.5 rounded-full border ${item.signalColor}`}>{item.signalTag}</span></div>
-                      <div className="flex justify-between items-center text-xs">
-                        <div><span className="text-gray-400 text-[11px] block">السعر والتغير</span><span className="font-mono font-bold text-white">${item.price}</span><span className={`text-[11px] font-bold mr-1.5 ${item.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.change}%</span></div>
-                        <div className="text-left"><span className="text-gray-400 text-[11px] block">صافي السيولة</span><span className={`font-mono font-bold ${item.netInflowNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.netInflow}</span></div>
-                      </div>
-                    </div>
-                  ))
-                )}
+                <input type="text" placeholder="بحث في الرادار..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white" />
+                {filteredPairs.map((item, idx) => (
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer">
+                    <div><strong className="text-white block">{item.label}</strong><span className="text-gray-400">${item.price}</span></div>
+                    <div className="text-left"><span className={`font-bold ${item.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.change}%</span><span className="text-[10px] text-gray-400 block">{item.netInflow}</span></div>
+                  </div>
+                ))}
               </div>
             )}
 
-            {/* 4. تبويب VIP الذكي */}
+            {/* 4. VIP الذكي */}
             {activeTab === 'signals' && (
               <div className="space-y-3">
-                <div className="bg-gray-900 border border-amber-500/40 rounded-2xl p-3.5 flex justify-between items-center">
-                  <h2 className="font-black text-amber-400 text-xs">🎯 مرصد الصفقات الذكية VIP</h2>
-                </div>
-                {smartMoneyVipSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-amber-500/40 rounded-2xl p-3.5 space-y-3 cursor-pointer">
-                    <div className="flex justify-between items-center">
-                      <span className="font-extrabold text-sm text-white">{item.label}</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">${item.entryFormatted}</span>
-                    </div>
+                <div className="bg-gray-900 border border-amber-500/40 rounded-2xl p-3"><h2 className="font-black text-amber-400 text-xs">🎯 مرصد الصفقات الذكية VIP</h2></div>
+                {vipSignals.map((item, idx) => (
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-amber-500/30 rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer">
+                    <div><span className="text-white font-extrabold">{item.label}</span><span className="text-emerald-400 mr-2 font-mono">${item.entryFormatted}</span></div>
+                    <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">VIP صفقة</span>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 5. تبويب الانفجارات */}
+            {/* 5. الانفجارات */}
             {activeTab === 'breakouts' && (
               <div className="space-y-3">
-                <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5"><h2 className="font-black text-emerald-400 text-xs">🚀 الانفجارات السعرية</h2></div>
+                <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3"><h2 className="font-black text-emerald-400 text-xs">🚀 الانفجارات السعرية</h2></div>
                 {breakoutSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/50 rounded-2xl p-3.5 flex justify-between items-center cursor-pointer">
-                    <span className="font-extrabold text-sm text-white">{item.label}</span>
-                    <span className="font-mono font-bold text-xs text-emerald-400">+{item.change}%</span>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/40 rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer">
+                    <span className="text-white font-extrabold">{item.label}</span>
+                    <span className="text-emerald-400 font-bold">+{item.change}% 🚀</span>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 6. تبويب إليوت */}
+            {/* 6. إليوت */}
             {activeTab === 'elliott' && (
               <div className="space-y-3">
-                <div className="bg-gray-900 border border-cyan-500/40 rounded-2xl p-3.5"><h2 className="font-black text-cyan-400 text-xs">🌊 موجات إليوت</h2></div>
+                <div className="bg-gray-900 border border-cyan-500/40 rounded-2xl p-3"><h2 className="font-black text-cyan-400 text-xs">🌊 موجات إليوت</h2></div>
                 {elliottSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-cyan-500/40 rounded-2xl p-3.5 flex justify-between items-center cursor-pointer">
-                    <span className="font-extrabold text-sm text-white">{item.label}</span>
-                    <span className="text-cyan-400 text-xs">موجة دافعة</span>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-cyan-500/40 rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer">
+                    <span className="text-white font-extrabold">{item.label}</span>
+                    <span className="text-cyan-400 font-bold">موجة دافعة صاعدة 🌊</span>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 7. تبويب SMC */}
+            {/* 7. SMC */}
             {activeTab === 'smc' && (
               <div className="space-y-3">
-                <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5"><h2 className="font-black text-emerald-400 text-xs">📊 مناطق SMC / ICT</h2></div>
+                <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3"><h2 className="font-black text-emerald-400 text-xs">📊 مناطق SMC / ICT</h2></div>
                 {smcSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5 flex justify-between items-center cursor-pointer">
-                    <span className="font-extrabold text-sm text-white">{item.label}</span>
-                    <span className="text-emerald-400 text-xs">منطقة طلب مؤسسي (OB)</span>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/40 rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer">
+                    <span className="text-white font-extrabold">{item.label}</span>
+                    <span className="text-emerald-400 font-bold">منطقة طلب مؤسسي (OB) 🟩</span>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 8. تبويب التصفيات */}
+            {/* 8. التصفيات */}
             {activeTab === 'liquidation' && (
               <div className="space-y-3">
-                <div className="bg-gray-900 border border-rose-500/40 rounded-2xl p-3.5"><h2 className="font-black text-rose-400 text-xs">⚡ التصفيات والسقويز</h2></div>
+                <div className="bg-gray-900 border border-rose-500/40 rounded-2xl p-3"><h2 className="font-black text-rose-400 text-xs">⚡ التصفيات والسقويز</h2></div>
                 {liquidationSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-rose-500/40 rounded-2xl p-3.5 flex justify-between items-center cursor-pointer">
-                    <span className="font-extrabold text-sm text-white">{item.label}</span>
-                    <span className="text-rose-400 text-xs">تصفية شورت ضخمة</span>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-rose-500/40 rounded-xl p-3 flex justify-between items-center text-xs cursor-pointer">
+                    <span className="text-white font-extrabold">{item.label}</span>
+                    <span className="text-rose-400 font-bold">تصفية شورت ضخمة ⚡</span>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 9. تبويب الدفتر */}
-            {activeTab === 'journal' && (
-              <div className="space-y-4">
-                <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-4 space-y-3">
-                  <h2 className="font-bold text-emerald-400 text-xs">📖 دفتر الصفقات (Win Rate: {journalStats.winRate}%)</h2>
-                  <form onSubmit={addJournalTrade} className="space-y-2 pt-2 border-t border-gray-800">
-                    <div className="grid grid-cols-2 gap-2">
-                      <input type="text" value={newTradeSymbol} onChange={(e) => setNewTradeSymbol(e.target.value)} placeholder="العملة (BTCUSDT)" className="bg-gray-950 border border-gray-800 rounded-xl p-2 text-xs text-white" required />
-                      <select value={newTradeType} onChange={(e) => setNewTradeType(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl p-2 text-xs text-white"><option value="LONG">LONG 🟢</option><option value="SHORT">SHORT 🔴</option></select>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <input type="number" step="any" value={newTradeEntry} onChange={(e) => setNewTradeEntry(e.target.value)} placeholder="الدخول" className="bg-gray-950 border border-gray-800 rounded-xl p-2 text-xs text-white" required />
-                      <select value={newTradeResult} onChange={(e) => setNewTradeResult(e.target.value)} className="bg-gray-950 border border-gray-800 rounded-xl p-2 text-xs text-white"><option value="WIN">ربح ✅</option><option value="LOSS">خسارة ❌</option></select>
-                      <input type="number" step="any" value={newTradePnL} onChange={(e) => setNewTradePnL(e.target.value)} placeholder="الربح ($)" className="bg-gray-950 border border-gray-800 rounded-xl p-2 text-xs text-white" required />
-                    </div>
-                    <button type="submit" className="w-full bg-emerald-500 text-gray-950 font-bold py-2 rounded-xl text-xs">تسجيل الصفقة</button>
-                  </form>
-                </div>
-                {journalTrades.map((t) => (
-                  <div key={t.id} className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex justify-between items-center text-xs">
-                    <div><span className={`font-bold ${t.type === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>{t.type}</span> <strong className="text-white">{t.symbol}</strong></div>
-                    <div className="flex items-center gap-3"><span className={`font-mono font-bold ${t.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>${t.pnl}</span><button onClick={() => deleteJournalTrade(t.id)} className="text-gray-500 hover:text-rose-400">✕</button></div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* 10. تبويب الشارت */}
+            {/* 9. الشارت */}
             {activeTab === 'chart' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-2 space-y-2 h-[520px]">
                 <div className="text-xs font-bold text-emerald-400 px-2">الشارت المباشر: BINANCE:{selectedSymbol}</div>
@@ -641,7 +418,7 @@
               </div>
             )}
 
-            {/* 11. تبويب المخاطر */}
+            {/* 10. المخاطر */}
             {activeTab === 'risk' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4 text-xs">
                 <h2 className="font-bold text-emerald-400 text-sm">حاسبة إدارة المخاطر</h2>
