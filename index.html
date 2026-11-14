@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس الشَّامِلَة - محطة التداول الشاملة V25.7</title>
+  <title>نِبْرَاس الشَّامِلَة - محطة التداول V25.8 المستقرة</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,51 +11,23 @@
   <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Tajawal', sans-serif; }
+    body { font-family: 'Tajawal', sans-serif; background-color: #030712; color: #f3f4f6; }
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen selection:bg-emerald-500 selection:text-black">
+<body class="min-h-screen">
   <div id="root"></div>
 
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    const playSmartAlertSound = () => {
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
-        const now = ctx.currentTime;
-        const playTone = (freq, startTime, duration) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, startTime);
-          gain.gain.setValueAtTime(0.18, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(startTime);
-          osc.stop(startTime + duration);
-        };
-        playTone(587.33, now, 0.14);
-        playTone(880.00, now + 0.14, 0.28);
-      } catch (e) { console.error('Audio play error:', e); }
-    };
-
     function NebrasApp() {
       const [activeTab, setActiveTab] = useState('us_market');
-      const [timeframe, setTimeframe] = useState('1h');
-      const [loading, setLoading] = useState(true);
-      const [allTickers, setAllTickers] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedSymbol, setSelectedSymbol] = useState('NASDAQ:AAPL');
       const [manualUsInput, setManualUsInput] = useState('');
-      
       const [toastMessage, setToastMessage] = useState(null);
 
       const showToast = (msg) => {
@@ -63,51 +35,15 @@
         setTimeout(() => setToastMessage(null), 2500);
       };
 
-      const [userTelegram] = useState(localStorage.getItem('nebras_telegram') || '@ahmed17200');
-      const [soundEnabled, setSoundEnabled] = useState(JSON.parse(localStorage.getItem('nebras_sound_active') || 'true'));
-
-      // قائمة موسعة لأبرز الأسهم الأمريكية (السوق الأمريكي الشامل)
       const [usStocks, setUsStocks] = useState([
-        { symbol: 'AAPL', label: 'Apple Inc.', price: '228.50', change: '+1.45', changeNum: 1.45, netInflow: '+45.2M$', isShort: false, tvSymbol: 'NASDAQ:AAPL', sl: '224.20', tp1: '232.00', tp2: '236.50', smartScore: 89 },
-        { symbol: 'NVDA', label: 'NVIDIA Corporation', price: '128.30', change: '+3.80', changeNum: 3.80, netInflow: '+112.5M$', isShort: false, tvSymbol: 'NASDAQ:NVDA', sl: '123.50', tp1: '133.00', tp2: '139.00', smartScore: 94 },
-        { symbol: 'TSLA', label: 'Tesla Inc.', price: '215.40', change: '-2.10', changeNum: -2.10, netInflow: '-38.4M$', isShort: true, tvSymbol: 'NASDAQ:TSLA', sl: '221.00', tp1: '209.00', tp2: '202.00', smartScore: 76 },
-        { symbol: 'MSFT', label: 'Microsoft Corp.', price: '425.10', change: '+0.85', changeNum: 0.85, netInflow: '+28.1M$', isShort: false, tvSymbol: 'NASDAQ:MSFT', sl: '418.00', tp1: '432.00', tp2: '440.00', smartScore: 84 },
-        { symbol: 'AMZN', label: 'Amazon.com Inc.', price: '186.20', change: '+1.15', changeNum: 1.15, netInflow: '+31.0M$', isShort: false, tvSymbol: 'NASDAQ:AMZN', sl: '182.50', tp1: '191.00', tp2: '196.00', smartScore: 82 },
-        { symbol: 'GOOGL', label: 'Alphabet Inc.', price: '165.80', change: '-0.40', changeNum: -0.40, netInflow: '-5.2M$', isShort: true, tvSymbol: 'NASDAQ:GOOGL', sl: '169.00', tp1: '162.00', tp2: '158.00', smartScore: 78 },
-        { symbol: 'META', label: 'Meta Platforms', price: '512.30', change: '+2.30', changeNum: 2.30, netInflow: '+64.0M$', isShort: false, tvSymbol: 'NASDAQ:META', sl: '501.00', tp1: '525.00', tp2: '538.00', smartScore: 91 },
-        { symbol: 'AMD', label: 'Advanced Micro Devices', price: '156.40', change: '+4.10', changeNum: 4.10, netInflow: '+55.8M$', isShort: false, tvSymbol: 'NASDAQ:AMD', sl: '150.00', tp1: '163.00', tp2: '170.00', smartScore: 88 },
-        { symbol: 'NFLX', label: 'Netflix Inc.', price: '680.20', change: '-1.20', changeNum: -1.20, netInflow: '-12.4M$', isShort: true, tvSymbol: 'NASDAQ:NFLX', sl: '695.00', tp1: '665.00', tp2: '650.00', smartScore: 75 },
-        { symbol: 'INTC', label: 'Intel Corporation', price: '21.50', change: '-3.40', changeNum: -3.40, netInflow: '-18.9M$', isShort: true, tvSymbol: 'NASDAQ:INTC', sl: '22.80', tp1: '20.20', tp2: '19.00', smartScore: 64 },
-        { symbol: 'PLTR', label: 'Palantir Technologies', price: '38.90', change: '+5.60', changeNum: 5.60, netInflow: '+78.2M$', isShort: false, tvSymbol: 'NYSE:PLTR', sl: '36.50', tp1: '41.00', tp2: '44.00', smartScore: 93 },
-        { symbol: 'COIN', label: 'Coinbase Global', price: '198.40', change: '+3.20', changeNum: 3.20, netInflow: '+41.5M$', isShort: false, tvSymbol: 'NASDAQ:COIN', sl: '190.00', tp1: '208.00', tp2: '218.00', smartScore: 86 }
+        { symbol: 'AAPL', label: 'Apple Inc.', price: '228.50', change: '+1.45', netInflow: '+45.2M$', isShort: false, tvSymbol: 'NASDAQ:AAPL' },
+        { symbol: 'NVDA', label: 'NVIDIA Corp.', price: '128.30', change: '+3.80', netInflow: '+112.5M$', isShort: false, tvSymbol: 'NASDAQ:NVDA' },
+        { symbol: 'TSLA', label: 'Tesla Inc.', price: '215.40', change: '-2.10', netInflow: '-38.4M$', isShort: true, tvSymbol: 'NASDAQ:TSLA' },
+        { symbol: 'MSFT', label: 'Microsoft Corp.', price: '425.10', change: '+0.85', netInflow: '+28.1M$', isShort: false, tvSymbol: 'NASDAQ:MSFT' },
+        { symbol: 'AMZN', label: 'Amazon.com', price: '186.20', change: '+1.15', netInflow: '+31.0M$', isShort: false, tvSymbol: 'NASDAQ:AMZN' },
+        { symbol: 'GOOGL', label: 'Alphabet Inc.', price: '165.80', change: '-0.40', netInflow: '-5.2M$', isShort: true, tvSymbol: 'NASDAQ:GOOGL' }
       ]);
 
-      const fetchAllBinanceData = async () => {
-        try {
-          const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-          const data = await res.json();
-          const usdtPairs = data.filter(t => t.symbol.endsWith('USDT')).map(t => {
-            const base = t.symbol.replace('USDT', '');
-            const priceNum = parseFloat(t.lastPrice);
-            if (priceNum <= 0) return null;
-            return {
-              symbol: t.symbol,
-              base: base,
-              label: `${base}/USDT`,
-              price: priceNum.toFixed(2),
-              tvSymbol: `BINANCE:${t.symbol}`
-            };
-          }).filter(Boolean);
-          setAllTickers(usdtPairs);
-          setLoading(false);
-        } catch (err) { console.error(err); }
-      };
-
-      useEffect(() => {
-        fetchAllBinanceData();
-      }, []);
-
-      // تصفية الأسهم الأمريكية حسب البحث
       const filteredUsStocks = useMemo(() => {
         if (!searchTerm) return usStocks;
         return usStocks.filter(s => s.symbol.toLowerCase().includes(searchTerm.toLowerCase()) || s.label.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -115,18 +51,21 @@
 
       useEffect(() => {
         if (activeTab === 'chart' && window.TradingView) {
-          new window.TradingView.widget({
-            "autosize": true,
-            "symbol": selectedSymbol,
-            "interval": '60',
-            "timezone": "Asia/Riyadh",
-            "theme": "dark",
-            "style": "1",
-            "locale": "ar",
-            "toolbar_bg": "#f1f3f6",
-            "enable_publishing": false,
-            "container_id": "tradingview_chart"
-          });
+          try {
+            document.getElementById('tradingview_chart').innerHTML = '';
+            new window.TradingView.widget({
+              "autosize": true,
+              "symbol": selectedSymbol,
+              "interval": '60',
+              "timezone": "Asia/Riyadh",
+              "theme": "dark",
+              "style": "1",
+              "locale": "ar",
+              "toolbar_bg": "#f1f3f6",
+              "enable_publishing": false,
+              "container_id": "tradingview_chart"
+            });
+          } catch (e) { console.error("TV Error:", e); }
         }
       }, [activeTab, selectedSymbol]);
 
@@ -136,31 +75,26 @@
         const cleanSymbol = manualUsInput.toUpperCase().trim();
         const tvSym = cleanSymbol.includes(':') ? cleanSymbol : `NASDAQ:${cleanSymbol}`;
         const newStock = {
-          symbol: cleanSymbol.replace('NASDAQ:', '').replace('NYSE:', ''),
+          symbol: cleanSymbol.replace(/^(NASDAQ|NYSE|AMEX):/, ''),
           label: `Custom Stock (${cleanSymbol})`,
           price: '150.00',
           change: '+1.50',
-          changeNum: 1.5,
           netInflow: '+20.0M$',
           isShort: false,
-          tvSymbol: tvSym,
-          sl: '145.00',
-          tp1: '156.00',
-          tp2: '162.00',
-          smartScore: 85
+          tvSymbol: tvSym
         };
         setUsStocks([newStock, ...usStocks]);
         setSelectedSymbol(tvSym);
         setManualUsInput('');
         setActiveTab('chart');
-        showToast(`تمت إضافة وتفعيل السهم ${cleanSymbol} بنجاح 🚀`);
+        showToast(`تمت الإضافة وتحويل الشارت إلى ${cleanSymbol} 🚀`);
       };
 
       return (
-        <div className="max-w-md mx-auto min-h-screen flex flex-col pb-6 relative bg-gray-950 text-gray-100">
+        <div className="max-w-md mx-auto min-h-screen flex flex-col pb-6 relative">
           
           {toastMessage && (
-            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-500 text-gray-950 px-4 py-2.5 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 border border-emerald-400 animate-bounce">
+            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-500 text-gray-950 px-4 py-2.5 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 border border-emerald-400">
               <span>{toastMessage}</span>
             </div>
           )}
@@ -169,43 +103,42 @@
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس الشَّامِلَة
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V25.7 (سوق شامل)</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V25.8</span>
               </h1>
-              <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
+              <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">@ahmed17200</span></p>
             </div>
           </header>
 
           <nav className="flex overflow-x-auto no-scrollbar bg-gray-900/90 p-1.5 m-3 rounded-xl border border-gray-800 gap-1 text-[10px] whitespace-nowrap">
-            <button onClick={() => setActiveTab('us_market')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'us_market' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-400 border border-blue-500/30'}`}>🇺🇸 السوق الأمريكي (كامل)</button>
+            <button onClick={() => setActiveTab('us_market')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'us_market' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-400 border border-blue-500/30'}`}>🇺🇸 السوق الأمريكي والأسهم</button>
             <button onClick={() => setActiveTab('chart')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'chart' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الشارت المباشر 📊</button>
           </nav>
 
           <main className="flex-1 px-3 space-y-3">
-            
             {activeTab === 'us_market' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-blue-950/80 via-gray-900 to-indigo-950/60 border border-blue-500/50 rounded-2xl p-4 space-y-3 shadow-xl">
-                  <span className="text-[9px] bg-blue-500/20 text-blue-300 font-bold px-2 py-0.5 rounded border border-blue-500/40">US MARKET ALL ACCESS V2.0</span>
-                  <h2 className="text-sm font-black text-white">إضافة وبحث أي سهم في السوق الأمريكي</h2>
-                  <p className="text-[10px] text-gray-300">اكتب رمز أي سهم (مثل META, NFLX, PLTR, AMD...) وسيتم إضافته وعرض شارت وتحليله الفوري.</p>
+                  <span className="text-[9px] bg-blue-500/20 text-blue-300 font-bold px-2 py-0.5 rounded border border-blue-500/40">US MARKET ENGINE V2.1</span>
+                  <h2 className="text-sm font-black text-white">إضافة وعرض أي سهم أمريكي</h2>
+                  <p className="text-[10px] text-gray-300">أدخل رمز السهم بالإنجليزية (مثال: META, AMD, NFLX, PLTR) لمعاينته وعرض الشارت المباشر.</p>
                   
                   <form onSubmit={addCustomUsStock} className="flex gap-2 pt-1">
                     <input 
                       type="text"
-                      placeholder="أدخل رمز السهم (مثال: META, AMD)..."
+                      placeholder="رمز السهم (مثال: META)..."
                       value={manualUsInput}
                       onChange={(e) => setManualUsInput(e.target.value)}
                       className="flex-1 bg-gray-950 border border-blue-500/50 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
                     />
                     <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow">
-                      إضافة وتحليل 🔍
+                      عرض الشارت 📊
                     </button>
                   </form>
                 </div>
 
                 <input 
                   type="text" 
-                  placeholder="ابحث في القائمة النشطة..." 
+                placeholder="ابحث في الأسهم..." 
                   value={searchTerm} 
                   onChange={(e) => setSearchTerm(e.target.value)} 
                   className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none" 
@@ -228,10 +161,8 @@
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
-                        <span className="text-[10px] text-gray-400">التغير: <strong className={stock.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{stock.change}%</strong> | السيولة: <strong className="text-white">{stock.netInflow}</strong></span>
-                        <div className="flex gap-1.5">
-                          <button onClick={() => { setSelectedSymbol(stock.tvSymbol); setActiveTab('chart'); }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1 rounded-lg text-[10px] shadow">عرض الشارت 📊</button>
-                        </div>
+                        <span className="text-[10px] text-gray-400">التغير: <strong className={stock.change.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}>{stock.change}%</strong></span>
+                        <button onClick={() => { setSelectedSymbol(stock.tvSymbol); setActiveTab('chart'); }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1 rounded-lg text-[10px] shadow">عرض الشارت 📊</button>
                       </div>
                     </div>
                   ))}
@@ -240,9 +171,9 @@
             )}
 
             {activeTab === 'chart' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-2 space-y-2 h-[540px]">
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-2 space-y-2 h-[560px]">
                 <div className="text-xs font-bold text-blue-400 px-2">الشارت المباشر للرمز: {selectedSymbol}</div>
-                <div id="tradingview_chart" className="h-[490px] w-full"></div>
+                <div id="tradingview_chart" className="h-[510px] w-full"></div>
               </div>
             )}
           </main>
@@ -250,7 +181,7 @@
       );
     }
 
-    ReactDOM.createRoot(getElementById('root')).render(<NebrasApp />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<NebrasApp />);
   </script>
 </body>
 </html>
