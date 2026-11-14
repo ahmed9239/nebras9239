@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V24.0</title>
+  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V24.1</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -295,7 +295,7 @@
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس الشَّامِلَة
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V24.0</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V24.1</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -486,9 +486,20 @@
               </div>
             )}
 
+            {/* --- تبويب الرادار المعدل ليطابق النسخة السابقة تماماً --- */}
             {activeTab === 'radar' && (
               <div className="space-y-3">
                 <input type="text" placeholder="ابحث عن أي عملة (BTC, ETH, WLD...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none" />
+                
+                {/* أزرار تصفية الرادار الأصلية */}
+                <div className="flex gap-1 overflow-x-auto no-scrollbar text-[10px] pb-1">
+                  <button onClick={() => setCategory('all')} className={`px-3 py-1.5 rounded-lg border font-bold whitespace-nowrap ${category === 'all' ? 'bg-emerald-500 text-gray-950 border-emerald-500' : 'bg-gray-900 border-gray-800 text-gray-300'}`}>الكل</button>
+                  <button onClick={() => setCategory('inflow')} className={`px-3 py-1.5 rounded-lg border font-bold whitespace-nowrap ${category === 'inflow' ? 'bg-emerald-500 text-gray-950 border-emerald-500' : 'bg-gray-900 border-gray-800 text-gray-300'}`}>دخول سيولة 🔥</button>
+                  <button onClick={() => setCategory('outflow')} className={`px-3 py-1.5 rounded-lg border font-bold whitespace-nowrap ${category === 'outflow' ? 'bg-rose-500 text-white border-rose-500' : 'bg-gray-900 border-gray-800 text-gray-300'}`}>خروج سيولة ⚠️</button>
+                  <button onClick={() => setCategory('majors')} className={`px-3 py-1.5 rounded-lg border font-bold whitespace-nowrap ${category === 'majors' ? 'bg-emerald-500 text-gray-950 border-emerald-500' : 'bg-gray-900 border-gray-800 text-gray-300'}`}>العملات الكبرى</button>
+                  <button onClick={() => setCategory('ai')} className={`px-3 py-1.5 rounded-lg border font-bold whitespace-nowrap ${category === 'ai' ? 'bg-emerald-500 text-gray-950 border-emerald-500' : 'bg-gray-900 border-gray-800 text-gray-300'}`}>الذكاء الاصطناعي</button>
+                </div>
+
                 {loading ? <div className="text-center py-12 text-gray-400 text-xs">جاري تحليل بيانات السيولة...</div> : (
                   filteredPairs.map((item, idx) => (
                     <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-gray-800 rounded-xl p-3.5 space-y-2.5 cursor-pointer">
