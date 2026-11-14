@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V16.1</title>
+  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V17.0</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -71,7 +71,7 @@
             if (permission === "granted") {
               setNotificationsEnabled(true);
               new Notification("نِبْرَاس لِلتَّدَاوُل الذَّكِي", {
-                body: `تم تفعيل إشعارات الجوال بنجاح للمستخدم (${userTelegram})`,
+                body: `تم تفعيل إشعارات الجوال الفورية للمستخدم (${userTelegram})`,
                 icon: "https://cryptologos.cc/logos/binance-coin-bnb-logo.png"
               });
             } else {
@@ -148,43 +148,47 @@
               const tp1 = isShort ? entry * 0.975 : entry * 1.025;
               const tp2 = isShort ? entry * 0.945 : entry * 1.055;
 
-              let elliottPhase = 'الموجة الأولى (Wave 1 - بناء الأساس)';
+              let elliottPhase = 'الموجة الأولى (Wave 1)';
               let elliottColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
               if (changeNum > 4.5 && volNum > 30000000) {
                 elliottPhase = 'الموجة الدافعة الثالثة (Wave 3 - الانفجار الأعنف 🚀)';
                 elliottColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
               } else if (changeNum > 2.0 && changeNum <= 4.5) {
-                elliottPhase = 'الموجة الخامسة (Wave 5 - قمة الاتجاه ⚠️)';
+                elliottPhase = 'الموجة الخامسة (Wave 5 - القمة ⚠️)';
                 elliottColor = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
               } else if (changeNum < 0 && changeNum > -3.0) {
-                elliottPhase = 'موجة التصحيح الرابعة (Wave 4 - فرصة دخول ارتدادية 🔄)';
+                elliottPhase = 'موجة التصحيح الرابعة (Wave 4 - ارتداد 🔄)';
                 elliottColor = 'bg-purple-500/10 text-purple-400 border-purple-500/30';
               } else if (changeNum <= -3.0) {
                 elliottPhase = 'تصحيح مركب (Wave A-B-C هابط)';
                 elliottColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
               }
 
-              let smcType = 'منطقة تجميع هادئة (Consolidation)';
+              let smcType = 'منطقة تجميع هادئة';
               let smcColor = 'bg-gray-800 text-gray-300 border-gray-700';
               if (volNum > 80000000 && changeNum > 3) {
-                smcType = 'منطقة طلب مؤسسي قوية (Bullish Order Block 🟩)';
+                smcType = 'منطقة طلب مؤسسي (Bullish OB 🟩)';
                 smcColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
               } else if (volNum > 80000000 && changeNum < -3) {
-                smcType = 'منطقة عرض مؤسسي قوية (Bearish Order Block 🟥)';
+                smcType = 'منطقة عرض مؤسسي (Bearish OB 🟥)';
                 smcColor = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
               } else if (Math.abs(changeNum) > 5) {
-                smcType = 'فجوة سعرية مؤسسية (Fair Value Gap - FVG ⚡)';
+                smcType = 'فجوة سعرية مؤسسية (FVG ⚡)';
                 smcColor = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
               }
 
-              let squeezeLabel = 'سوق متوازن';
-              let squeezeColor = 'text-gray-400 border-gray-700';
-              if (changeNum > 4 && volNum > 40000000) {
-                squeezeLabel = 'ضغط شورت حاد (Short Squeeze 🚀)';
-                squeezeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
-              } else if (changeNum < -4 && volNum > 40000000) {
-                squeezeLabel = 'ضغط لونج حاد (Long Squeeze ⚠️)';
-                squeezeColor = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+              // تفاصيل التصفيات لكل عملة
+              let liqType = 'متوازن';
+              let liqColor = 'text-gray-400 border-gray-700';
+              let estimatedLiqUsd = ((volNum * Math.abs(changeNum)) / 45).toFixed(0);
+              if (changeNum > 3.5) {
+                liqType = `تصفية شورت ضخمة (Short Squeeze)`;
+                liqColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+              } else if (changeNum < -3.5) {
+                liqType = `تصفية لونج ضخمة (Long Squeeze)`;
+                liqColor = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+              } else {
+                liqType = 'استقرار في عقود الهامش';
               }
 
               let tradeStatus = 'active';
@@ -239,8 +243,9 @@
                 elliottColor: elliottColor,
                 smcType: smcType,
                 smcColor: smcColor,
-                squeezeLabel: squeezeLabel,
-                squeezeColor: squeezeColor,
+                liqType: liqType,
+                liqColor: liqColor,
+                estimatedLiqUsd: estimatedLiqUsd,
                 tradeStatus: tradeStatus,
                 statusLabel: statusLabel,
                 statusColor: statusColor,
@@ -251,6 +256,17 @@
 
           setAllTickers(usdtPairs);
           setLoading(false);
+
+          // إرسال تنبيه جوال فوري في حال وجود انفجار قوي والإشعارات مفعلة
+          if (notificationsEnabled && usdtPairs.length > 0) {
+            const topBreakout = usdtPairs.find(p => p.isBreakout);
+            if (topBreakout) {
+              new Notification("🚨 تنبيه انفجار سعري في نِبْرَاس", {
+                body: `تم رصد انفجار للعملة ${topBreakout.label} بنسبة ${topBreakout.change}%!`,
+                icon: "https://cryptologos.cc/logos/binance-coin-bnb-logo.png"
+              });
+            }
+          }
         } catch (err) {
           console.error('Binance Fetch Error:', err);
         }
@@ -260,7 +276,7 @@
         fetchAllBinanceData();
         const interval = setInterval(fetchAllBinanceData, 3000);
         return () => clearInterval(interval);
-      }, []);
+      }, [notificationsEnabled]);
 
       useEffect(() => {
         if (activeTab === 'chart' && window.TradingView) {
@@ -333,9 +349,9 @@
 
       const liquidationSignals = useMemo(() => {
         return allTickers
-          .filter(item => Math.abs(item.changeNum) > 3.5 || item.volumeNum > 50000000)
+          .filter(item => Math.abs(item.changeNum) > 3.0 || item.volumeNum > 30000000)
           .sort((a, b) => Math.abs(b.changeNum) - Math.abs(a.changeNum))
-          .slice(0, 20);
+          .slice(0, 25);
       }, [allTickers]);
 
       const vipSignals = useMemo(() => {
@@ -369,7 +385,7 @@
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس الشَّامِلَة
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V16.1</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V17.0</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -378,7 +394,7 @@
                 onClick={() => setShowSettingsModal(true)}
                 className="text-[10px] bg-gray-800 border border-gray-700 text-emerald-400 px-2.5 py-1.5 rounded-lg font-bold hover:bg-gray-700 transition"
               >
-                ⚙️ الإعدادات
+                ⚙️ الإعدادات والتنبيهات
               </button>
             </div>
           </header>
@@ -387,10 +403,10 @@
             <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
               <div className="bg-gray-900 border border-emerald-500/50 rounded-2xl p-5 w-full max-w-sm space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-emerald-400 text-sm">إعدادات التنبيهات والاتصال</h3>
+                  <h3 className="font-bold text-emerald-400 text-sm">إعدادات التنبيهات وجوالك</h3>
                   <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-white font-bold">✕</button>
                 </div>
-                <p className="text-[11px] text-gray-300">ربط معرف تيليجرام أو تفعيل إشعار الجوال الفوري:</p>
+                <p className="text-[11px] text-gray-300">ربط معرف تيليجرام أو تفعيل إشعار الجوال الفوري للانفجارات:</p>
                 <form onSubmit={saveTelegramSettings} className="space-y-3">
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">معرف تيليجرام (Telegram Username):</label>
@@ -409,7 +425,7 @@
                       onClick={requestNotificationPermission} 
                       className={`flex-1 border text-xs py-2 rounded-xl font-bold transition ${notificationsEnabled ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-gray-800 border-gray-700 text-gray-200'}`}
                     >
-                      {notificationsEnabled ? '🔔 الجوال مفعل' : '🔕 تفعيل الإشعار'}
+                      {notificationsEnabled ? '🔔 التنبيهات مفعلة' : '🔕 تفعيل إشعار الجوال'}
                     </button>
                     <button 
                       type="submit" 
@@ -444,7 +460,7 @@
             <button onClick={() => setActiveTab('breakouts')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'breakouts' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الانفجارات 🚀</button>
             <button onClick={() => setActiveTab('elliott')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'elliott' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>إليوت 🌊</button>
             <button onClick={() => setActiveTab('smc')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'smc' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>مناطق SMC 📊</button>
-            <button onClick={() => setActiveTab('liquidation')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'liquidation' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>التصفيات ⚡</button>
+            <button onClick={() => setActiveTab('liquidation')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'liquidation' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>التصفيات المفصلة ⚡</button>
             <button onClick={() => setActiveTab('journal')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'journal' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الدفتر 📖</button>
             <button onClick={() => setActiveTab('radar')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'radar' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الرادار</button>
             <button onClick={() => setActiveTab('heatmap')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'heatmap' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الحرارية</button>
@@ -454,6 +470,69 @@
           </nav>
 
           <main className="flex-1 px-3 space-y-3">
+            
+            {/* 1. Breakouts Tab (Restored Full Targets & Status) */}
+            {activeTab === 'breakouts' && (
+              <div className="space-y-3">
+                <div className="bg-gradient-to-r from-emerald-950/70 to-gray-900 border border-emerald-500/50 rounded-2xl p-3.5 space-y-2">
+                  <h2 className="font-black text-emerald-400 text-xs">🚀 رادار الانفجارات السعرية اللحظية (مع الأهداف والصفقات)</h2>
+                  <p className="text-[10px] text-gray-300">تتبع العملات التي تخترق المقاومات مع تفاصيل الدخول والأهداف ووقف الخسارة المباشر.</p>
+                </div>
+
+                {loading ? (
+                  <div className="text-center py-12 text-gray-400 text-xs">جاري رصد الانفجارات...</div>
+                ) : breakoutSignals.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 text-xs bg-gray-900/50 rounded-xl border border-gray-800">لا توجد انفجارات سعرية نشطة حالياً...</div>
+                ) : (
+                  breakoutSignals.map((item, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }}
+                      className={`border rounded-2xl p-3.5 space-y-3 cursor-pointer transition-all hover:scale-[1.01] ${item.isShort ? 'bg-gray-900 border-rose-500/50 hover:border-rose-400' : 'bg-gray-900 border-emerald-500/50 hover:border-emerald-400'}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-black text-[10px] px-2 py-0.5 rounded text-gray-950 ${item.isShort ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                            {item.isShort ? 'انفجار هابط 📉' : 'انفجار صاعد 🚀'}
+                          </span>
+                          <span className="font-extrabold text-sm text-white">{item.label}</span>
+                        </div>
+                        <span className={`font-mono font-bold text-xs ${item.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {item.changeNum >= 0 ? `+${item.change}%` : `${item.change}%`}
+                        </span>
+                      </div>
+
+                      {/* جدول الدخول والأهداف الكاملة */}
+                      <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800">
+                          <span className="text-gray-400 block text-[8px] mb-0.5">سعر الدخول</span>
+                          <span className="text-white font-mono font-bold">${item.entryFormatted}</span>
+                        </div>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/30">
+                          <span className="text-rose-400 block text-[8px] mb-0.5">وقف (SL)</span>
+                          <span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span>
+                        </div>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/30">
+                          <span className="text-emerald-400 block text-[8px] mb-0.5">الهدف 1</span>
+                          <span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span>
+                        </div>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/30">
+                          <span className="text-cyan-400 block text-[8px] mb-0.5">الهدف 2</span>
+                          <span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[10px] text-gray-400 pt-1 border-t border-gray-800">
+                        <span>حالة الصفقة: <strong className={item.statusColor}>{item.statusLabel}</strong></span>
+                        <span className="text-emerald-400 underline font-medium">عرض الشارت 📊</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* 2. Elliott Waves Tab */}
             {activeTab === 'elliott' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-cyan-950/70 to-gray-900 border border-cyan-500/50 rounded-2xl p-3.5 space-y-2.5">
@@ -501,6 +580,7 @@
               </div>
             )}
 
+            {/* 3. SMC / ICT Order Blocks Tab */}
             {activeTab === 'smc' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-emerald-950/70 to-gray-900 border border-emerald-500/50 rounded-2xl p-3.5 space-y-2">
@@ -523,28 +603,46 @@
               </div>
             )}
 
+            {/* 4. Detailed Liquidations Tab (تصفيات مفصلة لكل عملة) */}
             {activeTab === 'liquidation' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-rose-950/70 to-gray-900 border border-rose-500/50 rounded-2xl p-3.5 space-y-2">
-                  <h2 className="font-black text-rose-400 text-xs">⚡ رادار تصفية العقود وضغط السقويز (Liquidations & Squeeze)</h2>
-                  <p className="text-[10px] text-gray-300">تتبع عمليات تصفية العقود الآجلة لتوقع الانفجارات العكسية.</p>
+                  <h2 className="font-black text-rose-400 text-xs">⚡ بيان تفصيلي لتصفيات العقود الآجلة لكل عملة (Liquidations & Squeeze)</h2>
+                  <p className="text-[10px] text-gray-300">بيانات دقيقة لكل عملة توضح حجم العقود المعرضة للتصفية وحجم السقويز اللحظي.</p>
                 </div>
 
                 {liquidationSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-gray-800 hover:border-rose-500/50 rounded-xl p-3 space-y-2 cursor-pointer transition-all">
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-gray-800 hover:border-rose-500/50 rounded-xl p-3.5 space-y-2.5 cursor-pointer transition-all">
                     <div className="flex justify-between items-center">
                       <span className="font-extrabold text-sm text-white">{item.label}</span>
-                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${item.squeezeColor}`}>{item.squeezeLabel}</span>
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${item.liqColor}`}>{item.liqType}</span>
                     </div>
-                    <div className="flex justify-between items-center text-xs text-gray-300">
-                      <span>التغير 24س: <strong className={item.changeNum >= 0 ? 'text-emerald-400 font-mono' : 'text-rose-400 font-mono'}>{item.change}%</strong></span>
-                      <span className="text-cyan-400 underline">فتح الشارت 📊</span>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] bg-gray-950 p-2 rounded-xl border border-gray-800">
+                      <div>
+                        <span className="text-gray-400 block text-[8px]">حجم التصفية المقدر</span>
+                        <strong className="text-rose-400 font-mono">${item.estimatedLiqUsd}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[8px]">سعر العملة</span>
+                        <strong className="text-white font-mono">${item.price}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[8px]">التغير 24س</span>
+                        <strong className={`font-mono ${item.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.change}%</strong>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] text-gray-400 pt-1 border-t border-gray-800">
+                      <span>الفوليوم الإجمالي: <strong className="text-cyan-300">${item.volume}</strong></span>
+                      <span className="text-cyan-400 underline font-medium">فتح الشارت 📊</span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
 
+            {/* 5. Trading Journal Tab */}
             {activeTab === 'journal' && (
               <div className="space-y-4">
                 <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-4 space-y-3">
@@ -609,23 +707,7 @@
               </div>
             )}
 
-            {activeTab === 'breakouts' && (
-              <div className="space-y-3">
-                <div className="bg-gradient-to-r from-emerald-950/70 to-gray-900 border border-emerald-500/50 rounded-2xl p-3.5 space-y-2">
-                  <h2 className="font-black text-emerald-400 text-xs">🚀 رادار الانفجارات السعرية اللحظية</h2>
-                </div>
-                {breakoutSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/50 rounded-2xl p-3.5 space-y-3 cursor-pointer hover:scale-[1.01] transition-all">
-                    <div className="flex justify-between items-center">
-                      <span className="font-black text-[10px] px-2 py-0.5 rounded bg-emerald-500 text-gray-950">انفجار 🚀</span>
-                      <span className="font-extrabold text-sm text-white">{item.label}</span>
-                      <span className="font-mono font-bold text-xs text-emerald-400">+{item.change}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
+            {/* Radar Tab */}
             {activeTab === 'radar' && (
               <div className="space-y-3">
                 <input type="text" placeholder="ابحث عن أي عملة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
@@ -640,6 +722,7 @@
               </div>
             )}
 
+            {/* Heatmap Tab */}
             {activeTab === 'heatmap' && (
               <div className="grid grid-cols-3 gap-2">
                 {allTickers.slice(0, 30).map((item, idx) => (
@@ -651,17 +734,56 @@
               </div>
             )}
 
+            {/* VIP Signals Tab (Restored Full Details) */}
             {activeTab === 'signals' && (
               <div className="space-y-4">
                 {readyToEntry && (
                   <div onClick={() => { setSelectedSymbol(readyToEntry.symbol); setEntryPrice(readyToEntry.rawPrice); setActiveTab('chart'); }} className="bg-emerald-950/80 border-2 border-emerald-500 rounded-2xl p-3.5 space-y-2 cursor-pointer animate-pulse-fast">
                     <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2.5 py-1 rounded-full">🚨 صفقة VIP جاهزة الآن!</span>
-                    <span className="font-extrabold text-white text-sm block">عملة {readyToEntry.label}</span>
+                    <span className="font-extrabold text-white text-sm block">عملة {readyToEntry.label} - دخول فوري (${readyToEntry.price})</span>
                   </div>
                 )}
+
+                <div className="space-y-2.5">
+                  <div className="bg-gray-900 border border-emerald-500/40 rounded-xl p-3 text-xs flex justify-between items-center">
+                    <span className="font-bold text-emerald-400">📈 صفقات VIP لونج (Long)</span>
+                    <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded">مباشر 🔄</span>
+                  </div>
+
+                  {activeLongSignals.map((item, idx) => (
+                    <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/40 rounded-xl p-3.5 space-y-3 cursor-pointer hover:border-emerald-400 transition-all">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-emerald-500 text-gray-950 font-black text-[10px] px-2 py-0.5 rounded">LONG 🟢</span>
+                          <span className="font-extrabold text-sm text-white">{item.label}</span>
+                        </div>
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${item.statusColor}`}>{item.statusLabel}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800">
+                          <span className="text-gray-400 block text-[8px] mb-0.5">الدخول</span>
+                          <span className="text-white font-mono font-bold">${item.entryFormatted}</span>
+                        </div>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/20">
+                          <span className="text-rose-400 block text-[8px] mb-0.5">وقف (SL)</span>
+                          <span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span>
+                        </div>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/20">
+                          <span className="text-emerald-400 block text-[8px] mb-0.5">الهدف 1</span>
+                          <span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span>
+                        </div>
+                        <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/20">
+                          <span className="text-cyan-400 block text-[8px] mb-0.5">الهدف 2</span>
+                          <span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
+            {/* Chart Tab */}
             {activeTab === 'chart' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-2 space-y-2 h-[520px]">
                 <div className="text-xs font-bold text-emerald-400 px-2">الشارت المباشر: BINANCE:{selectedSymbol}</div>
@@ -669,6 +791,7 @@
               </div>
             )}
 
+            {/* Risk Tab */}
             {activeTab === 'risk' && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4 text-xs">
                 <h2 className="font-bold text-emerald-400 text-sm">حاسبة إدارة المخاطر</h2>
