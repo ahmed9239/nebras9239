@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس الشَّامِلَة - محطة التداول V25.4</title>
+  <title>نِبْرَاس الشَّامِلَة - محطة التداول V25.5</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -124,7 +124,7 @@
 
       const copyTradePlanText = (ticker) => {
         const tradeTypeStr = ticker.isShort ? 'SHORT 🔴 (بيع)' : 'LONG 🟢 (شراء)';
-        const text = `🚀 توصية من نبراس الشاملة V25.4\nاتجاه الصفقة: ${tradeTypeStr}\nالعملة: ${ticker.label}\nالسعر الحالي: $${ticker.price}\n📍 منطقة الدخول: $${ticker.entryLowFormatted} - $${ticker.entryHighFormatted}\n🛑 وقف الخسارة (SL): $${ticker.slFormatted}\n🎯 الهدف الأول (TP1): $${ticker.tp1Formatted}\n🎯 الهدف الثاني (TP2): $${ticker.tp2Formatted}\n🎯 الهدف الثالث (TP3): $${ticker.tp3Formatted}\n📊 الفريم النشط: ${timeframe}`;
+        const text = `🚀 توصية من نبراس الشاملة V25.5\nاتجاه الصفقة: ${tradeTypeStr}\nالعملة: ${ticker.label}\nالسعر الحالي: $${ticker.price}\n📍 منطقة الدخول: $${ticker.entryLowFormatted} - $${ticker.entryHighFormatted}\n🛑 وقف الخسارة (SL): $${ticker.slFormatted}\n🎯 الهدف الأول (TP1): $${ticker.tp1Formatted}\n🎯 الهدف الثاني (TP2): $${ticker.tp2Formatted}\n🎯 الهدف الثالث (TP3): $${ticker.tp3Formatted}\n📊 الفريم النشط: ${timeframe}`;
         navigator.clipboard.writeText(text);
         showToast('تم نسخ خطة الصفقة بنجاح! 📋');
       };
@@ -188,7 +188,7 @@
               const sellPercent = (100 - parseFloat(buyPercent)).toFixed(1);
               const netInflowNum = (volNum * (changeNum / 100) * 0.15) / 1000000;
               
-              const isShort = netInflowNum < 0; // إذا كانت السيولة سالبة، الاتجاه بيع SHORT
+              const isShort = netInflowNum < 0; 
               const isBreakout = Math.abs(changeNum) >= 4.0 || volNum > 50000000;
               
               const tfMultiplier = timeframe === '15m' ? 0.003 : timeframe === '1h' ? 0.008 : timeframe === '4h' ? 0.02 : 0.05;
@@ -199,6 +199,9 @@
               const tp1 = isShort ? priceNum * (1 - tfMultiplier * 1.2) : priceNum * (1 + tfMultiplier * 1.2);
               const tp2 = isShort ? priceNum * (1 - tfMultiplier * 2.5) : priceNum * (1 + tfMultiplier * 2.5);
               const tp3 = isShort ? priceNum * (1 - tfMultiplier * 4.0) : priceNum * (1 + tfMultiplier * 4.0);
+
+              // حساب ديناميكي فريد لـ "قوة القرار" بناءً على حركة العملة وحجم التداول والسيولة
+              const calculatedScore = Math.min(Math.max(Math.round(65 + Math.abs(changeNum) * 3.2 + Math.min(Math.abs(netInflowNum) * 1.8, 25)), 60), 97);
 
               let elliottPhase = timeframe === '15m' ? 'الموجة السريعة (Wave 1)' : timeframe === '4h' ? 'الموجة الدافعة الثالثة (Wave 3)' : 'الموجة الرئيسية';
               let elliottColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
@@ -235,7 +238,7 @@
                 netInflow: (netInflowNum >= 0 ? `+${netInflowNum.toFixed(2)}M$` : `${netInflowNum.toFixed(2)}M$`),
                 isShort: isShort,
                 isBreakout: isBreakout,
-                smartScore: timeframe === '15m' ? 78 : timeframe === '4h' ? 88 : 82,
+                smartScore: calculatedScore, // قوة القرار أصبحت ديناميكية فريدة لكل عملة
                 elliottPhase: elliottPhase,
                 elliottColor: elliottColor,
                 smcType: smcType,
@@ -315,7 +318,7 @@
           symbol: 'BTCUSDT', base: 'BTC', label: 'BTC/USDT', rawPrice: 65694, price: '65694.00',
           entryLowFormatted: '65606.77', entryHighFormatted: '65738.12', slFormatted: '66854.55',
           tp1Formatted: '64838.64', tp2Formatted: '62068.47', tp3Formatted: '59761.93', changeNum: -1.5, change: '-1.50',
-          netInflowNum: -1.5, netInflow: '-1.50M$', smartScore: 82, smcType: 'منطقة عرض مؤسسي', isShort: true
+          netInflowNum: -1.5, netInflow: '-1.50M$', smartScore: 81, smcType: 'منطقة عرض مؤسسي', isShort: true
         };
       }, [allTickers, selectedSymbol]);
 
@@ -336,7 +339,7 @@
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس الشَّامِلَة
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V25.4</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V25.5</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -376,7 +379,7 @@
                   {activeReportModal === 'narrative' && (
                     <div className="space-y-2">
                       <p>يقوم العقل الاصطناعي بمعالجة تدفقات السيولة الحية ودورات الأوامر.</p>
-                      <p className="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/30 text-indigo-200"><strong>الخلاصة السردية:</strong> الاتجاه الحالي يتطابق مع {selectedAiTicker.isShort ? 'ضغط بيعي وتدفقات سلبية' : 'تراكم إيجابي للشراء'} على فريم {timeframe}.</p>
+                      <p className="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/30 text-indigo-200"><strong>الخلاصة السردية:</strong> الاتجاه الحالي يتطابق مع {selectedAiTicker.isShort ? 'ضغط بيعي وتدفقات سلبية' : 'تراكم إيجابي للشراء'} على فريم {timeframe}، بقوة قرار بلغت <span className="font-bold text-white">{selectedAiTicker.smartScore}%</span>.</p>
                     </div>
                   )}
 
@@ -512,7 +515,6 @@
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        {/* الترويسة أصبحت متوافقة تماماً مع حالة البيع أو الشراء */}
                         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded border ${selectedAiTicker.isShort ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'}`}>
                           {selectedAiTicker.isShort ? 'بيع قوي / ضغط هبوطي 📉' : 'شراء قوي جداً 🚀'}
                         </span>
@@ -522,6 +524,7 @@
                       </div>
                       <strong className="text-base text-white font-black block mt-1.5">{selectedAiTicker.label} ${selectedAiTicker.price}</strong>
                     </div>
+                    {/* قوة القرار أصبحت ديناميكية تختلف باختلاف العملة وحجم التداول */}
                     <div className="relative w-16 h-16 rounded-full border-4 border-indigo-500 flex flex-col items-center justify-center bg-gray-950 shadow-lg">
                       <span className="text-sm font-black text-indigo-400">{selectedAiTicker.smartScore}</span>
                       <span className="text-[8px] text-gray-400 font-bold">قوة القرار</span>
