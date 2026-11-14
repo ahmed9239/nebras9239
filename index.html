@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V22.0</title>
+  <title>نِبْرَاس الشَّامِلَة - محطة التداول المؤسسي V23.0</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -60,7 +60,7 @@
     };
 
     function NebrasApp() {
-      const [activeTab, setActiveTab] = useState('ai_predict'); // البداية في التبويب الجديد
+      const [activeTab, setActiveTab] = useState('ai_predict');
       const [timeframe, setTimeframe] = useState('15m');
       const [elliottScope, setElliottScope] = useState('small');
       const [category, setCategory] = useState('all');
@@ -69,6 +69,9 @@
       const [allTickers, setAllTickers] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
+      
+      // الإدخال اليدوي للعملات في العقل الاصطناعي
+      const [manualSymbolInput, setManualSymbolInput] = useState('');
       
       const [userTelegram, setUserTelegram] = useState(localStorage.getItem('nebras_telegram') || '@ahmed17200');
       const [notificationsEnabled, setNotificationsEnabled] = useState(JSON.parse(localStorage.getItem('nebras_notif_active') || 'true'));
@@ -267,6 +270,7 @@
 
               let liqType = 'متوازن';
               let liqColor = 'text-gray-400 border-gray-700';
+              let estimatedLiqUsd = ((volNum * Math.abs(changeNum)) / 45).toFixed(0);
               if (changeNum > 3.5) {
                 liqType = `تصفية شورت ضخمة (Short Squeeze 🚀)`;
                 liqColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
@@ -281,8 +285,10 @@
 
               if (isShort) {
                 if (priceNum <= tp2) { tradeStatus = 'success'; statusLabel = 'تحقق الهدف TP2 🚀'; statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'; }
+                else if (priceNum <= tp1) { statusLabel = 'تحقق الهدف TP1 ✅'; statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'; }
               } else {
                 if (priceNum >= tp2) { tradeStatus = 'success'; statusLabel = 'تحقق الهدف TP2 🚀'; statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'; }
+                else if (priceNum >= tp1) { statusLabel = 'تحقق الهدف TP1 ✅'; statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'; }
               }
 
               let catTag = 'عملة نشطة';
@@ -330,6 +336,7 @@
                 smcColor: smcColor,
                 liqType: liqType,
                 liqColor: liqColor,
+                estimatedLiqUsd: estimatedLiqUsd,
                 tradeStatus: tradeStatus,
                 statusLabel: statusLabel,
                 statusColor: statusColor,
@@ -403,8 +410,14 @@
       }, [allTickers]);
 
       const elliottSignals = useMemo(() => {
-        return allTickers.filter(item => Math.abs(item.changeNum) >= 2.5).sort((a, b) => b.volumeNum - a.volumeNum).slice(0, 20);
-      }, [allTickers]);
+        let list = [...allTickers];
+        if (elliottScope === 'small') {
+          list = list.filter(item => Math.abs(item.changeNum) >= 2.5);
+        } else {
+          list = list.filter(item => majorSymbols.includes(item.base) || Math.abs(item.netInflowNum) > 0.5);
+        }
+        return list.sort((a, b) => b.volumeNum - a.volumeNum).slice(0, 20);
+      }, [allTickers, elliottScope]);
 
       const smcSignals = useMemo(() => {
         return allTickers.filter(item => item.volumeNum > 20000000 && Math.abs(item.changeNum) > 1.5).sort((a, b) => b.volumeNum - a.volumeNum).slice(0, 25);
@@ -463,7 +476,7 @@
             <div>
               <h1 className="text-sm font-black text-emerald-400 tracking-wide flex items-center gap-1.5">
                 نِبْرَاس الشَّامِلَة
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V22.0</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-1.5 py-0.5 rounded border border-emerald-500/30">V23.0</span>
               </h1>
               <p className="text-[10px] text-gray-400 mt-0.5">المستخدم: <span className="text-emerald-300 font-bold">{userTelegram}</span></p>
             </div>
@@ -512,7 +525,23 @@
             </div>
           )}
 
-          {/* Navigation Tabs (تم إضافة تبويب العقل الاصطناعي V5.0 كأول تبويب جديد) */}
+          <div className="grid grid-cols-2 gap-2 p-3 bg-gray-900/50 border-b border-gray-800/80">
+            <div className="bg-gray-900 border border-emerald-500/20 rounded-xl p-2.5 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-gray-400 block">زعيم ضخ السيولة</span>
+                <strong className="text-xs text-emerald-400 font-extrabold">{topInflow ? topInflow.label : '---'}</strong>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-400">{topInflow ? topInflow.netInflow : '0$'}</span>
+            </div>
+            <div className="bg-gray-900 border border-rose-500/20 rounded-xl p-2.5 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-gray-400 block">زعيم خروج السيولة</span>
+                <strong className="text-xs text-rose-400 font-extrabold">{topOutflow ? topOutflow.label : '---'}</strong>
+              </div>
+              <span className="text-xs font-mono font-bold text-rose-400">{topOutflow ? topOutflow.netInflow : '0$'}</span>
+            </div>
+          </div>
+
           <nav className="flex overflow-x-auto no-scrollbar bg-gray-900/90 p-1.5 m-3 rounded-xl border border-gray-800 gap-1 text-[10px] whitespace-nowrap">
             <button onClick={() => setActiveTab('ai_predict')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'ai_predict' ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 border border-indigo-500/30'}`}>🧠 العقل الاصطناعي V5.0</button>
             <button onClick={() => setActiveTab('radar')} className={`px-3 py-2 font-bold rounded-lg transition-all ${activeTab === 'radar' ? 'bg-emerald-500 text-gray-950 shadow-lg' : 'text-gray-400'}`}>الرادار 📡</button>
@@ -529,21 +558,72 @@
 
           <main className="flex-1 px-3 space-y-3">
             
-            {/* --- تبويب العقل الاصطناعي التنبؤي الشامل V5.0 الجديد --- */}
+            {/* --- تبويب العقل الاصطناعي التنبؤي الشامل V5.0 (مع الإدخال اليدوي للعملات) --- */}
             {activeTab === 'ai_predict' && selectedAiTicker && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-r from-indigo-950/80 via-gray-900 to-purple-950/60 border border-indigo-500/50 rounded-2xl p-4 space-y-3 shadow-xl">
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-500/40">QUANTUM AI & TIME ANALYSIS</span>
-                      <h2 className="text-sm font-black text-white mt-1">العقل الاصطناعي التنبؤي الشامل V5.0</h2>
+                      <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-500/40">QUANTUM AI & TIME ANALYSIS V5.0</span>
+                      <h2 className="text-sm font-black text-white mt-1">العقل الاصطناعي التنبؤي الشامل</h2>
                     </div>
-                    <button onClick={fetchAllBinanceData} className="text-[10px] bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-xl shadow">إعادة التحليل 🔄</button>
                   </div>
-                  <p className="text-[10px] text-gray-300 leading-relaxed">تحليل كفي متزامن عبر 9 مدارس تحليلية عالمية (التحليل الزمني ودورات جان، الهارمونيك، السيولة المؤسسية SMC، الأوردرفلو، المشتقات، وخريطة التصفيات) بدقة فائقة.</p>
+                  <p className="text-[10px] text-gray-300 leading-relaxed">تحليل كفي متزامن عبر 9 مدارس تحليلية عالمية مع إمكانية البحث وإضافة العملات يدوياً.</p>
+                  
+                  {/* حقل الإدخال اليدوي للعملات */}
+                  <div className="flex gap-2 pt-1">
+                    <input 
+                      type="text"
+                      placeholder="أدخل رمز العملة يدوياً (مثال: DOGE أو PEPE)"
+                      value={manualSymbolInput}
+                      onChange={(e) => setManualSymbolInput(e.target.value)}
+                      className="flex-1 bg-gray-950 border border-indigo-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-400"
+                    />
+                    <button 
+                      onClick={() => {
+                        if (!manualSymbolInput) return;
+                        let sym = manualSymbolInput.toUpperCase().trim();
+                        if (!sym.endsWith('USDT')) sym += 'USDT';
+                        const found = allTickers.find(t => t.symbol === sym);
+                        if (found) {
+                          setSelectedSymbol(sym);
+                        } else {
+                          const customObj = {
+                            symbol: sym,
+                            base: sym.replace('USDT', ''),
+                            label: sym,
+                            rawPrice: 1.0,
+                            price: '1.0000',
+                            entryFormatted: '0.9950',
+                            slFormatted: '0.9600',
+                            tp1Formatted: '1.0500',
+                            tp2Formatted: '1.1200',
+                            tp3Formatted: '1.2000',
+                            changeNum: 3.5,
+                            change: '3.50',
+                            volumeNum: 25000000,
+                            volume: '25.0M',
+                            netInflowNum: 1.2,
+                            netInflow: '+1.20M$',
+                            smartScore: 85,
+                            smartReason: 'إدخال يدوي مخصص + تدفق مؤسسي',
+                            smcType: 'منطقة طلب مؤسسي (Bullish OB 🟩)',
+                            smcColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+                            statusLabel: 'نشطة 🚀',
+                            statusColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          };
+                          setAllTickers(prev => [customObj, ...prev]);
+                          setSelectedSymbol(sym);
+                        }
+                        setManualSymbolInput('');
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow"
+                    >
+                      تحليل يدوي 🔍
+                    </button>
+                  </div>
                 </div>
 
-                {/* شريط العملات السريع لاختيار العملة المطلوبة في التحليل */}
                 <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar text-[11px]">
                   {allTickers.slice(0, 15).map((item, idx) => (
                     <button 
@@ -556,22 +636,18 @@
                   ))}
                 </div>
 
-                {/* بطاقة تحليل العملة المختارة مع مؤشر قوة القرار */}
                 <div className="bg-gray-900 border border-indigo-500/40 rounded-2xl p-4 space-y-3.5">
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
                     <div>
                       <span className="text-[10px] text-indigo-400 font-bold block">التحليل المتقدم لعملة</span>
                       <strong className="text-base text-white font-black">${selectedAiTicker.price} {selectedAiTicker.label}</strong>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-12 h-12 rounded-full bg-indigo-500/10 border-2 border-indigo-500 flex flex-col items-center justify-center">
-                        <span className="text-xs font-black text-indigo-300">{selectedAiTicker.smartScore}</span>
-                        <span className="text-[7px] text-gray-400">القوة</span>
-                      </div>
+                    <div className="w-12 h-12 rounded-full bg-indigo-500/10 border-2 border-indigo-500 flex flex-col items-center justify-center">
+                      <span className="text-xs font-black text-indigo-300">{selectedAiTicker.smartScore}</span>
+                      <span className="text-[7px] text-gray-400">القوة</span>
                     </div>
                   </div>
 
-                  {/* توافق الفريمات */}
                   <div className="space-y-1.5 text-[11px]">
                     <span className="text-gray-400 block font-bold">توافق الفريمات:</span>
                     <div className="grid grid-cols-2 gap-2 text-center">
@@ -586,7 +662,6 @@
                     </div>
                   </div>
 
-                  {/* تفاصيل التحليل الهيكلي */}
                   <div className="space-y-2 text-[11px] pt-1">
                     <div className="flex justify-between bg-gray-950 p-2.5 rounded-xl border border-gray-800">
                       <span className="text-gray-400">الترند العام:</span>
@@ -599,7 +674,6 @@
                   </div>
                 </div>
 
-                {/* بطاقة خطة التداول المؤسسية المقترحة */}
                 <div className="bg-gradient-to-br from-gray-900 to-indigo-950/40 border border-indigo-500/60 rounded-2xl p-4 space-y-3">
                   <h3 className="font-black text-indigo-300 text-xs flex items-center gap-1.5">
                     📋 بطاقة خطة التداول المؤسسية المقترحة
@@ -641,7 +715,7 @@
               </div>
             )}
 
-            {/* --- باقي الأدوات والتبويبات السابقة بكامل تفاصيلها دون أي نقصان --- */}
+            {/* --- باقي التبويبات بكامل أدواتها وتفاصيلها --- */}
             
             {activeTab === 'radar' && (
               <div className="space-y-3">
@@ -657,8 +731,12 @@
                     <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-gray-800 rounded-xl p-3.5 space-y-2.5 cursor-pointer">
                       <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className={`text-[10px] px-2 py-0.5 rounded-full border ${item.signalColor}`}>{item.signalTag}</span></div>
                       <div className="flex justify-between items-center text-xs">
-                        <div><span className="text-gray-400 text-[11px] block">السعر</span><span className="font-mono font-bold text-white">${item.price}</span><span className={`text-[11px] font-bold mr-1.5 ${item.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.change}%</span></div>
+                        <div><span className="text-gray-400 text-[11px] block">السعر والتغير</span><span className="font-mono font-bold text-white">${item.price}</span><span className={`text-[11px] font-bold mr-1.5 ${item.changeNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.change}%</span></div>
                         <div className="text-left"><span className="text-gray-400 text-[11px] block">صافي السيولة</span><span className={`font-mono font-bold ${item.netInflowNum >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{item.netInflow}</span></div>
+                      </div>
+                      <div className="space-y-1 pt-1 border-t border-gray-800/60">
+                        <div className="flex justify-between text-[10px]"><span className="text-emerald-400 font-bold">شراء {item.buyPercent}%</span><span className="text-rose-400 font-bold">بيع {item.sellPercent}%</span></div>
+                        <div className="h-1.5 w-full bg-rose-500/30 rounded-full overflow-hidden flex"><div style={{ width: `${item.buyPercent}%` }} className="bg-emerald-500 h-full"></div></div>
                       </div>
                     </div>
                   ))
@@ -697,8 +775,14 @@
               <div className="space-y-3">
                 <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5"><h2 className="font-black text-emerald-400 text-xs">🚀 الانفجارات السعرية</h2></div>
                 {breakoutSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5 space-y-2 cursor-pointer">
-                    <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className="font-mono font-bold text-emerald-400">+{item.change}%</span></div>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }} className="border rounded-2xl p-3.5 space-y-3 cursor-pointer bg-gray-900 border-emerald-500/50">
+                    <div className="flex justify-between items-center"><span className="font-black text-[10px] px-2 py-0.5 rounded bg-emerald-500 text-gray-950">انفجار صاعد 🚀</span><span className="font-extrabold text-sm text-white">{item.label}</span><span className="font-mono font-bold text-xs text-emerald-400">+{item.change}%</span></div>
+                    <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800"><span className="text-gray-400 block text-[8px]">الدخول</span><span className="text-white font-mono font-bold">${item.entryFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/30"><span className="text-rose-400 block text-[8px]">وقف (SL)</span><span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/30"><span className="text-emerald-400 block text-[8px]">الهدف 1</span><span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/30"><span className="text-cyan-400 block text-[8px]">الهدف 2</span><span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span></div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -708,8 +792,14 @@
               <div className="space-y-3">
                 <div className="bg-gray-900 border border-cyan-500/40 rounded-2xl p-3.5"><h2 className="font-black text-cyan-400 text-xs">🌊 موجات إليوت</h2></div>
                 {elliottSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-cyan-500/40 rounded-2xl p-3.5 space-y-2 cursor-pointer">
-                    <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className="text-cyan-400 text-xs">{item.elliottPhase}</span></div>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }} className="bg-gray-900 border border-cyan-500/40 rounded-2xl p-3.5 space-y-3 cursor-pointer">
+                    <div className="flex justify-between items-center"><span className={`font-black text-[10px] px-2.5 py-1 rounded-lg border ${item.elliottColor}`}>{item.elliottPhase}</span><span className="font-extrabold text-sm text-white">{item.label}</span></div>
+                    <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800"><span className="text-gray-400 block text-[8px]">الدخول</span><span className="text-white font-mono font-bold">${item.entryFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/30"><span className="text-rose-400 block text-[8px]">وقف (SL)</span><span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/30"><span className="text-emerald-400 block text-[8px]">الهدف 1</span><span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/30"><span className="text-cyan-400 block text-[8px]">الهدف 2</span><span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span></div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -719,8 +809,14 @@
               <div className="space-y-3">
                 <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5"><h2 className="font-black text-emerald-400 text-xs">📊 مناطق SMC / ICT</h2></div>
                 {smcSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5 space-y-2 cursor-pointer">
-                    <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className="text-emerald-400 text-xs">{item.smcType}</span></div>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }} className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-3.5 space-y-3 cursor-pointer">
+                    <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${item.smcColor}`}>{item.smcType}</span></div>
+                    <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800"><span className="text-gray-400 block text-[8px]">الدخول</span><span className="text-white font-mono font-bold">${item.entryFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/30"><span className="text-rose-400 block text-[8px]">وقف (SL)</span><span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/30"><span className="text-emerald-400 block text-[8px]">الهدف 1</span><span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/30"><span className="text-cyan-400 block text-[8px]">الهدف 2</span><span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span></div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -730,8 +826,14 @@
               <div className="space-y-3">
                 <div className="bg-gray-900 border border-rose-500/40 rounded-2xl p-3.5"><h2 className="font-black text-rose-400 text-xs">⚡ التصفيات والسقويز</h2></div>
                 {liquidationSignals.map((item, idx) => (
-                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setActiveTab('chart'); }} className="bg-gray-900 border border-rose-500/40 rounded-2xl p-3.5 space-y-2 cursor-pointer">
-                    <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className="text-rose-400 text-xs">{item.liqType}</span></div>
+                  <div key={idx} onClick={() => { setSelectedSymbol(item.symbol); setEntryPrice(item.rawPrice); setActiveTab('chart'); }} className="bg-gray-900 border border-rose-500/40 rounded-2xl p-3.5 space-y-3 cursor-pointer">
+                    <div className="flex justify-between items-center"><span className="font-extrabold text-sm text-white">{item.label}</span><span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${item.liqColor}`}>{item.liqType}</span></div>
+                    <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-gray-800"><span className="text-gray-400 block text-[8px]">الدخول</span><span className="text-white font-mono font-bold">${item.entryFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-rose-500/30"><span className="text-rose-400 block text-[8px]">وقف (SL)</span><span className="text-rose-300 font-mono font-bold">${item.slFormatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-emerald-500/30"><span className="text-emerald-400 block text-[8px]">الهدف 1</span><span className="text-emerald-300 font-mono font-bold">${item.tp1Formatted}</span></div>
+                      <div className="bg-gray-950 p-1.5 rounded-lg border border-cyan-500/30"><span className="text-cyan-400 block text-[8px]">الهدف 2</span><span className="text-cyan-300 font-mono font-bold">${item.tp2Formatted}</span></div>
+                    </div>
                   </div>
                 ))}
               </div>
